@@ -405,15 +405,15 @@ None. There is no data, and this is the first app in the project.
 
 #### Automated
 
-- [ ] 1.1 Image builds: `sandbox/build.sh` exits 0
-- [ ] 1.2 Static binary: `file /usr/local/bin/runcmd` reports "statically linked"
-- [ ] 1.3 Hardened hello_world passes with full docker run flags
-- [ ] 1.4 A file-writing challenge (create_file) passes the same way
-- [ ] 1.5 Django still boots: `uv run python manage.py check`
+- [x] 1.1 Image builds: `sandbox/build.sh` exits 0
+- [x] 1.2 Static binary: `file /usr/local/bin/runcmd` reports "statically linked"
+- [x] 1.3 Hardened hello_world passes with full docker run flags
+- [x] 1.4 A file-writing challenge (create_file) passes the same way
+- [x] 1.5 Django still boots: `uv run python manage.py check`
 
 #### Manual
 
-- [ ] 1.6 `sandbox/README.md` and `sandbox/LICENSE` carry the upstream copyright and commit
+- [x] 1.6 `sandbox/README.md` and `sandbox/LICENSE` carry the upstream copyright and commit
 
 ### Phase 2: Challenge catalog and sandbox runner
 
