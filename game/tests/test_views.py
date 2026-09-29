@@ -368,3 +368,32 @@ class TimerAndDoneUiTests(ViewTestCase):
         self.assertContains(self.client.get(reverse('game:home')), '5 minutes')
         with override_settings(GAME_DURATION_S=120):
             self.assertContains(self.client.get(reverse('game:home')), '2 minutes')
+
+
+class SummaryTests(ViewTestCase):
+    CODE = '987654'
+
+    def finish(self, solved=1, attempts=3):
+        self.start()
+        GameSession.objects.filter(pk=self.game().pk).update(
+            code=self.CODE, solved=solved, attempts=attempts, last_solved_at=timezone.now(),
+            finished_at=timezone.now())
+
+    def test_done_shows_stats_place_and_code(self):
+        self.finish(solved=1, attempts=3)
+        html = self.client.get(reverse('game:done')).content.decode()
+        self.assertIn('#1 of 1', html)
+        self.assertRegex(html, r'Attempts:\s*<strong>3</strong>')
+        self.assertRegex(html, r'class="prize-code"[^>]*>\s*987654\s*<')
+
+    def test_code_is_not_leaked_on_play_or_json(self):
+        self.start()
+        GameSession.objects.filter(pk=self.game().pk).update(code=self.CODE)
+        self.assertNotContains(self.client.get(reverse('game:play')), self.CODE)
+        self.assertNotContains(self.command('ls'), self.CODE)
+        self.assertNotContains(self.client.get(reverse('game:state')), self.CODE)
+
+    def test_done_redirects_still_hold(self):
+        self.assertRedirects(self.client.get(reverse('game:done')), reverse('game:home'))
+        self.start()
+        self.assertRedirects(self.client.get(reverse('game:done')), reverse('game:play'))

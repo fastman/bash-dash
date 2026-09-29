@@ -14,7 +14,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
-from django.db.models import F, Q
+from django.db.models import DurationField, ExpressionWrapper, F, Q
 from django.db.models.functions import Coalesce, Least
 from django.utils import timezone
 
@@ -97,6 +97,30 @@ def expire_overdue(game_id=None, now=None) -> int:
     if game_id is not None:
         qs = qs.filter(pk=game_id)
     return qs.update(finished_at=F('deadline_at'))
+
+
+def ranked_games():
+    """Finished games in ranking order: solved desc, attempts asc, solve time asc.
+
+    The single definition of the PRD ranking rule; S-05 adds its "hidden" filter here.
+    Overdue games are finished first. ``elapsed`` is NULL when nothing was solved.
+    """
+    expire_overdue()
+    return GameSession.objects.filter(finished_at__isnull=False).annotate(
+        elapsed=ExpressionWrapper(F('last_solved_at') - F('started_at'), output_field=DurationField()),
+    ).order_by('-solved', 'attempts', 'elapsed', 'started_at')
+
+
+def rank_of(game: GameSession) -> tuple[int, int] | None:
+    """``(place, total)`` among finished games (competition ranking), or None if unfinished."""
+    ranked = ranked_games()
+    me = ranked.filter(pk=game.pk).first()
+    if me is None:
+        return None
+    better = Q(solved__gt=me.solved) | Q(solved=me.solved, attempts__lt=me.attempts)
+    if me.elapsed is not None:
+        better |= Q(solved=me.solved, attempts=me.attempts, elapsed__lt=me.elapsed)
+    return 1 + ranked.filter(better).count(), ranked.count()
 
 
 def remaining_ms(game: GameSession, now=None) -> int:
