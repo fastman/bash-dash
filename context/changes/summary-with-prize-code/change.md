@@ -1,7 +1,7 @@
 ---
 change_id: summary-with-prize-code
 title: Summary with prize code
-status: plan_reviewed
+status: implementing
 created: 2026-09-29
 updated: 2026-09-29
 archived_at: null

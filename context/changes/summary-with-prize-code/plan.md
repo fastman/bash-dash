@@ -280,13 +280,13 @@ Each `/done` load runs one bulk `UPDATE` (indexed on `deadline_at`, filtered on 
 
 #### Automated
 
-- [x] 2.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
-- [x] 2.2 Django checks pass: `uv run python manage.py check`
-- [x] 2.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
+- [x] 2.1 Game and challenge tests pass: `uv run python manage.py test game challenges` — 5f8e1bf
+- [x] 2.2 Django checks pass: `uv run python manage.py check` — 5f8e1bf
+- [x] 2.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run` — 5f8e1bf
 
 #### Manual
 
 - [ ] 2.4 `/done` at 360 px and 320 px shows solved, attempts, place and code without horizontal scroll
 - [ ] 2.5 Three games in separate browsers rank as expected; reloading an earlier `/done` shows the updated place
-- [x] 2.6 An abandoned overdue game is counted in the total on the next `/done` load
-- [x] 2.7 Reloading `/done` keeps the same code
+- [x] 2.6 An abandoned overdue game is counted in the total on the next `/done` load — 5f8e1bf
+- [x] 2.7 Reloading `/done` keeps the same code — 5f8e1bf
