@@ -1,7 +1,7 @@
 ---
 change_id: server-side-time-limit
 title: Server-side time limit
-status: implementing
+status: impl_reviewed
 created: 2026-09-29
 updated: 2026-09-29
 archived_at: null

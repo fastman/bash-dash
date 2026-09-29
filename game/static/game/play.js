@@ -113,7 +113,7 @@
     setBusy(true);
     setVerdict('Running…', 'running');
     var ctrl = new AbortController();
-    var timer = setTimeout(function () { ctrl.abort(); }, FETCH_TIMEOUT_MS);
+    var fetchTimer = setTimeout(function () { ctrl.abort(); }, FETCH_TIMEOUT_MS);
     fetch(form.dataset.url, {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken()},
@@ -134,9 +134,12 @@
           : 'Network error, try again.', 'warn');
       })
       .then(function () {
-        clearTimeout(timer);
+        clearTimeout(fetchTimer);
         setBusy(false);
         input.focus();
+        // The 0:00 check skipped goDone while this request was busy. If the response didn't
+        // carry finished: true, don't leave the player stuck: /done sends unfinished games back to /play.
+        if (locked) setTimeout(goDone, 1000);
       });
   });
 })();
