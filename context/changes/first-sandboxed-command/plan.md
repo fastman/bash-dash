@@ -544,17 +544,17 @@ Answer the roadmap unknown ("~1 s at ~15 concurrent players?") with numbers from
 
 #### Automated
 
-- [x] 3.1 View tests pass (redirects, JSON contract per status, CSRF, reload restores last attempt)
-- [x] 3.2 Description filter escapes HTML and renders backticks/fences
-- [x] 3.3 No answer links in rendered pages
-- [x] 3.4 Full suite passes: `uv run python manage.py test`
-- [x] 3.5 Checks pass: `uv run python manage.py check`
+- [x] 3.1 View tests pass (redirects, JSON contract per status, CSRF, reload restores last attempt) — b74576f
+- [x] 3.2 Description filter escapes HTML and renders backticks/fences — b74576f
+- [x] 3.3 No answer links in rendered pages — b74576f
+- [x] 3.4 Full suite passes: `uv run python manage.py test` — b74576f
+- [x] 3.5 Checks pass: `uv run python manage.py check` — b74576f
 
 #### Manual
 
 - [ ] 3.6 Play first 5 challenges at phone width: output, verdict, advance and attempts counter behave
-- [x] 3.7 Reload mid-game restores challenge, counters and last output
-- [x] 3.8 Fork bomb and `sleep 60` return within ~6 s as timed out and are counted
+- [x] 3.7 Reload mid-game restores challenge, counters and last output — b74576f
+- [x] 3.8 Fork bomb and `sleep 60` return within ~6 s as timed out and are counted — b74576f
 - [ ] 3.9 Large output scrolls inside the output box
 - [ ] 3.10 Sandbox unavailable shows retry message, attempt not counted, command kept
 
@@ -562,13 +562,13 @@ Answer the roadmap unknown ("~1 s at ~15 concurrent players?") with numbers from
 
 #### Automated
 
-- [ ] 4.1 `bench_game --players 15` exits 0
-- [ ] 4.2 `bench_game --players 15 --mix with-abuse` exits 0
-- [ ] 4.3 Full suite passes: `uv run python manage.py test`
-- [ ] 4.4 No leaked containers after bench runs
+- [x] 4.1 `bench_game --players 15` exits 0
+- [x] 4.2 `bench_game --players 15 --mix with-abuse` exits 0
+- [x] 4.3 Full suite passes: `uv run python manage.py test`
+- [x] 4.4 No leaked containers after bench runs
 
 #### Manual
 
-- [ ] 4.5 `verification.md` records 15-player p50/p95 with a verdict on the ~1 s unknown
+- [x] 4.5 `verification.md` records 15-player p50/p95 with a verdict on the ~1 s unknown
 - [ ] 4.6 Real phone over LAN: keyboard settings, send-to-submit, readable output
-- [ ] 4.7 F-02 concurrency contract written down in `verification.md`
+- [x] 4.7 F-02 concurrency contract written down in `verification.md`
