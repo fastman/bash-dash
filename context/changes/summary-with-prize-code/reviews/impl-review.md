@@ -60,7 +60,7 @@ Manual criteria: 2.4 (320/360 px layout) and 2.5 (three-browser ranking) are unc
   - Tradeoff: 1.5 (the admin UI) still has no evidence, and a unit test is not the end-to-end browser check the row describes.
   - Confidence: MED — the tests are easy to write, but they relabel manual rows as automated.
   - Blind spot: Whether the user counts the implementing agent's shell checks as a sufficient manual check.
-- **Decision**: PENDING
+- **Decision**: Fix A — rows 1.5, 2.6, 2.7 unticked in plan.md; to be checked by hand in Phase 9 (user decision)
 
 ### F2 — `done` unpacks `rank_of()` with no guard for `None`
 
@@ -70,4 +70,4 @@ Manual criteria: 2.4 (320/360 px layout) and 2.5 (three-browser ranking) are unc
 - **Location**: game/views.py:183
 - **Detail**: `place, ranked_total = services.rank_of(game)` assumes a finished game always has a rank. That holds today. The plan and the `ranked_games()` docstring name that queryset as the place where S-05 adds its "hidden" filter. Once S-05 lands, a hidden or disqualified player who reloads `/done` gets a `TypeError` (HTTP 500) instead of their summary and code. S-04's lookup would also need to handle `None`.
 - **Fix**: Bind `rank = services.rank_of(game)` and pass `place`/`ranked_total` as `None` when it is missing, with `{% if place %}` around the Place line in `done.html`. Alternatively, record this as an explicit S-05 plan requirement.
-- **Decision**: PENDING
+- **Decision**: Noted as carry-over on S-05 in roadmap.md; no code change now (user decision)

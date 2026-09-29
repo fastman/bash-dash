@@ -274,7 +274,7 @@ Each `/done` load runs one bulk `UPDATE` (indexed on `deadline_at`, filtered on 
 
 #### Manual
 
-- [x] 1.5 Admin shows the code column and finds a game by code — 318a63c
+- [ ] 1.5 Admin shows the code column and finds a game by code
 
 ### Phase 2: Ranking and the summary page
 
@@ -288,5 +288,5 @@ Each `/done` load runs one bulk `UPDATE` (indexed on `deadline_at`, filtered on 
 
 - [ ] 2.4 `/done` at 360 px and 320 px shows solved, attempts, place and code without horizontal scroll
 - [ ] 2.5 Three games in separate browsers rank as expected; reloading an earlier `/done` shows the updated place
-- [x] 2.6 An abandoned overdue game is counted in the total on the next `/done` load — 5f8e1bf
-- [x] 2.7 Reloading `/done` keeps the same code — 5f8e1bf
+- [ ] 2.6 An abandoned overdue game is counted in the total on the next `/done` load
+- [ ] 2.7 Reloading `/done` keeps the same code
