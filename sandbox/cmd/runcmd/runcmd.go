@@ -94,6 +94,7 @@ func handleServer(log *slog.Logger, cfg *config.Config, addr string) {
 }
 
 func main() {
+	hardenPID1() // bash-dash local modification, see harden_linux.go
 	devMode := flag.Bool("dev", lookupEnvOrVal("CMD_DEV_MODE", false), "run in development mode")
 	rateLimit := flag.Bool("setRateLimit", lookupEnvOrVal("CMD_SET_RATE_LIMIT", false), "set rate limits")
 	devTag := flag.Bool("devTag", lookupEnvOrVal("CMD_DEV_TAG", false), "use a dev tag for container images")
