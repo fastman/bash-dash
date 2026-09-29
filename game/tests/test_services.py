@@ -1,7 +1,9 @@
+import re
 import threading
 from datetime import timedelta
 from unittest import mock
 
+from django.db import IntegrityError
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
@@ -52,6 +54,37 @@ class StartGameTests(ServiceTestCase):
                 services.start_game(nick)
         services.start_game('x' * 20)  # boundary is fine
         self.assertEqual(GameSession.objects.count(), 1)
+
+
+class PrizeCodeTests(ServiceTestCase):
+    def test_started_game_has_six_digit_code(self):
+        game = self.fresh(services.start_game('neo'))
+        self.assertRegex(game.code, r'^\d{6}$')
+
+    def test_leading_zeros_are_preserved(self):
+        with mock.patch.object(services, 'generate_code', return_value='000042'):
+            game = services.start_game('neo')
+        self.assertEqual(self.fresh(game).code, '000042')
+
+    def test_collision_is_retried_and_transaction_stays_usable(self):
+        first = services.start_game('a')
+        with mock.patch.object(services, 'generate_code', side_effect=[first.code, '123456']):
+            game = services.start_game('b')
+        self.assertEqual(self.fresh(game).code, '123456')
+        self.assertEqual(GameSession.objects.count(), 2)
+
+    def test_exhausted_retries_raise_and_create_nothing(self):
+        first = services.start_game('a')
+        with mock.patch.object(services, 'generate_code', return_value=first.code):
+            with self.assertRaises(RuntimeError):
+                services.start_game('b')
+        self.assertEqual(GameSession.objects.count(), 1)
+
+    def test_duplicate_code_violates_db_constraint(self):
+        first = services.start_game('a')
+        now = timezone.now()
+        with self.assertRaises(IntegrityError):
+            GameSession.objects.create(nick='b', deadline_at=now, code=first.code)
 
 
 class SubmitCommandTests(ServiceTestCase):

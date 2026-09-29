@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import F, Q
 from django.db.models.functions import Coalesce, Least
 from django.utils import timezone
@@ -21,7 +21,7 @@ from django.utils import timezone
 from challenges import catalog, sandbox
 from challenges.catalog import Challenge
 
-from .models import Attempt, GameSession
+from .models import Attempt, GameSession, generate_code
 
 logger = logging.getLogger('game')
 
@@ -29,6 +29,7 @@ logger = logging.getLogger('game')
 TIMED_OUT_Q = Q(finished_at=F('deadline_at'), current_slug__isnull=False)
 
 NICK_MAX_CHARS = 20
+CODE_ATTEMPTS = 10
 
 # SubmitOutcome.status values. Only RAN is counted as an attempt.
 RAN = 'ran'
@@ -77,9 +78,16 @@ def start_game(nick: str) -> GameSession:
     if first is None:
         raise RuntimeError('no playable challenges')
     now = timezone.now()
-    return GameSession.objects.create(
-        nick=nick, current_slug=first.slug, started_at=now,
-        deadline_at=now + timedelta(seconds=settings.GAME_DURATION_S))
+    for _ in range(CODE_ATTEMPTS):
+        try:
+            with transaction.atomic():
+                return GameSession.objects.create(
+                    nick=nick, current_slug=first.slug, started_at=now,
+                    deadline_at=now + timedelta(seconds=settings.GAME_DURATION_S),
+                    code=generate_code())
+        except IntegrityError:
+            continue
+    raise RuntimeError('could not allocate a unique prize code')
 
 
 def expire_overdue(game_id=None, now=None) -> int:

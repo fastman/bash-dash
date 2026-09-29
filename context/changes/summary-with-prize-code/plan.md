@@ -267,14 +267,14 @@ Each `/done` load runs one bulk `UPDATE` (indexed on `deadline_at`, filtered on 
 
 #### Automated
 
-- [ ] 1.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
-- [ ] 1.2 Django checks pass: `uv run python manage.py check`
-- [ ] 1.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
-- [ ] 1.4 Migration applies to the existing dev DB and every row gets a distinct code
+- [x] 1.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
+- [x] 1.2 Django checks pass: `uv run python manage.py check`
+- [x] 1.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
+- [x] 1.4 Migration applies to the existing dev DB and every row gets a distinct code
 
 #### Manual
 
-- [ ] 1.5 Admin shows the code column and finds a game by code
+- [x] 1.5 Admin shows the code column and finds a game by code
 
 ### Phase 2: Ranking and the summary page
 
