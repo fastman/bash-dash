@@ -1,0 +1,44 @@
+{% extends 'game/base.html' %}
+{% load game_text %}
+{% block title %}Prize desk{% endblock %}
+{% block content %}
+<section class="staff">
+  <h1>Prize desk</h1>
+  {% for message in messages %}
+  <p class="notice-{% if message.level_tag == 'success' %}ok{% elif message.level_tag == 'warning' %}warn{% else %}bad{% endif %}">{{ message }}</p>
+  {% endfor %}
+  <form method="get" action="{% url 'game:staff_lookup' %}">
+    <input type="text" name="code" value="{{ code }}" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="6-digit code" autofocus>
+    <button type="submit">Look up</button>
+  </form>
+  {% if error %}<p class="notice-bad">{{ error }}</p>{% endif %}
+  {% if game %}
+  <div class="staff-card">
+    <p class="staff-nick">{{ game.nick }}</p>
+    <p class="muted">Ask the player for their nick</p>
+    <p>Solved: <strong>{{ game.solved }} / {{ total }}</strong></p>
+    <p>Attempts: <strong>{{ game.attempts }}</strong></p>
+    <p>Place: <strong>{% if rank %}#{{ rank.0 }} of {{ rank.1 }}{% else %}not ranked{% endif %}</strong></p>
+    <p>Solve time: <strong>{{ solve_time|mmss }}</strong></p>
+    {% if game.is_finished %}
+    <p>Finished {{ game.finished_at|timesince }} ago</p>
+    {% if game.prize_given %}
+    <p class="notice-warn">Prize already given {{ game.prize_given_at|timesince }} ago ({{ game.prize_given_at|date:"H:i" }})</p>
+    {% else %}
+    <form method="post" action="{% url 'game:staff_prize' %}">
+      {% csrf_token %}
+      <input type="hidden" name="code" value="{{ game.code }}">
+      <button type="submit" class="prize-button">Mark prize given</button>
+    </form>
+    {% endif %}
+    {% else %}
+    <p class="notice-warn">Game in progress</p>
+    {% endif %}
+  </div>
+  {% endif %}
+  <form method="post" action="{% url 'admin:logout' %}" class="logout">
+    {% csrf_token %}
+    <button type="submit" class="link">Log out</button>
+  </form>
+</section>
+{% endblock %}

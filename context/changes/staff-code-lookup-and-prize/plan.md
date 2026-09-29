@@ -278,26 +278,26 @@ A lookup runs one indexed `SELECT` by code, the bulk `expire_overdue` `UPDATE`, 
 
 #### Automated
 
-- [x] 1.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
-- [x] 1.2 Django checks pass: `uv run python manage.py check`
-- [x] 1.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
-- [x] 1.4 Migration applies to the existing dev DB: `uv run python manage.py migrate`
+- [x] 1.1 Game and challenge tests pass: `uv run python manage.py test game challenges` — a909510
+- [x] 1.2 Django checks pass: `uv run python manage.py check` — a909510
+- [x] 1.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run` — a909510
+- [x] 1.4 Migration applies to the existing dev DB: `uv run python manage.py migrate` — a909510
 
 #### Manual
 
-- [x] 1.5 Admin shows the prize-given column and filter and stays read-only
+- [x] 1.5 Admin shows the prize-given column and filter and stays read-only — a909510
 
 ### Phase 2: Staff lookup page
 
 #### Automated
 
-- [ ] 2.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
-- [ ] 2.2 Django checks pass: `uv run python manage.py check`
-- [ ] 2.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
+- [x] 2.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
+- [x] 2.2 Django checks pass: `uv run python manage.py check`
+- [x] 2.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
 
 #### Manual
 
-- [ ] 2.4 Logged-out `/staff` goes to admin login and returns after login
+- [x] 2.4 Logged-out `/staff` goes to admin login and returns after login
 - [ ] 2.5 Lookup form and card fit 360 px and 320 px; numeric keyboard on a real phone
 - [ ] 2.6 End to end: lookup matches `/done`, prize marked, second press shows "already given"
 - [ ] 2.7 In-progress game shows "Game in progress" and no prize button

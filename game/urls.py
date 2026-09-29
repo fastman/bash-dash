@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import staff_views, views
 
 app_name = 'game'
 
@@ -11,4 +11,6 @@ urlpatterns = [
     path('play/command', views.command, name='command'),
     path('play/state', views.state, name='state'),
     path('done', views.done, name='done'),
+    path('staff', staff_views.lookup, name='staff_lookup'),
+    path('staff/prize', staff_views.give_prize, name='staff_prize'),
 ]
