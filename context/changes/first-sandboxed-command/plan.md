@@ -562,13 +562,13 @@ Answer the roadmap unknown ("~1 s at ~15 concurrent players?") with numbers from
 
 #### Automated
 
-- [x] 4.1 `bench_game --players 15` exits 0
-- [x] 4.2 `bench_game --players 15 --mix with-abuse` exits 0
-- [x] 4.3 Full suite passes: `uv run python manage.py test`
-- [x] 4.4 No leaked containers after bench runs
+- [x] 4.1 `bench_game --players 15` exits 0 — a689452
+- [x] 4.2 `bench_game --players 15 --mix with-abuse` exits 0 — a689452
+- [x] 4.3 Full suite passes: `uv run python manage.py test` — a689452
+- [x] 4.4 No leaked containers after bench runs — a689452
 
 #### Manual
 
-- [x] 4.5 `verification.md` records 15-player p50/p95 with a verdict on the ~1 s unknown
+- [x] 4.5 `verification.md` records 15-player p50/p95 with a verdict on the ~1 s unknown — a689452
 - [ ] 4.6 Real phone over LAN: keyboard settings, send-to-submit, readable output
-- [x] 4.7 F-02 concurrency contract written down in `verification.md`
+- [x] 4.7 F-02 concurrency contract written down in `verification.md` — a689452
