@@ -1,0 +1,45 @@
+import uuid
+
+from django.db import models
+
+
+class GameSession(models.Model):
+    """One player's game. Counters are denormalised for S-02 (time limit) and S-03 (ranking)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    nick = models.CharField(max_length=20)
+    started_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    # None means finished (always together with finished_at).
+    current_slug = models.CharField(max_length=64, null=True)
+    attempts = models.PositiveIntegerField(default=0)
+    solved = models.PositiveIntegerField(default=0)
+    last_solved_at = models.DateTimeField(null=True)
+    finished_at = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return f'{self.nick} ({self.id})'
+
+    @property
+    def is_finished(self) -> bool:
+        return self.finished_at is not None
+
+
+class Attempt(models.Model):
+    """One counted command run. Runs that hit our own bugs (error_internal) are logged, not stored."""
+
+    game = models.ForeignKey(GameSession, on_delete=models.CASCADE, related_name='attempt_set')
+    slug = models.CharField(max_length=64)
+    command = models.TextField()
+    correct = models.BooleanField()
+    output = models.TextField()
+    error = models.CharField(max_length=255, blank=True)
+    timed_out = models.BooleanField()
+    duration_ms = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [models.Index(fields=['game', 'created_at'])]
+
+    def __str__(self):
+        return f'{self.slug}: {self.command[:40]}'

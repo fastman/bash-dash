@@ -7,8 +7,10 @@ game and the ``verify_challenges`` harness both run commands through
 
 import base64
 import json
+import logging
 import threading
 import time
+import weakref
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -58,6 +60,11 @@ SANDBOX_RUN_PROFILE = {
 }
 
 
+# docker-py does not wrap every transport error (e.g. a daemon lost mid-session
+# surfaces as requests' ConnectionError), so both families mean "Docker is down".
+_DOCKER_DOWN = (docker.errors.DockerException, requests.exceptions.RequestException)
+
+
 class SandboxUnavailable(Exception):
     """Docker failed before the sandbox container existed (daemon down, image missing)."""
 
@@ -75,14 +82,47 @@ class SandboxResult:
 
 _client = None
 _client_lock = threading.Lock()
+# client -> image names whose check succeeded (the image only changes on deploy);
+# weak keys so a discarded client never lends its entry to a new one. Guarded by _client_lock.
+_image_ok: 'weakref.WeakKeyDictionary[object, set[str]]' = weakref.WeakKeyDictionary()
+
+logger = logging.getLogger(__name__)
+
+# The game reaps only containers older than this, so a reap from any worker can
+# never hit a run that is still between wait() and remove() (HOST_TIMEOUT_S + tail).
+GAME_REAP_MIN_AGE_S = 30
+_reaped_once = False
+_reap_lock = threading.Lock()
 
 
 def _get_client():
     global _client
     with _client_lock:
         if _client is None:
-            _client = docker.from_env()
+            # +2: headroom for reap_stale and bench_game's own calls beside the capped runs.
+            _client = docker.from_env(max_pool_size=settings.SANDBOX_MAX_CONCURRENT + 2)
         return _client
+
+
+def clear_image_cache() -> None:
+    with _client_lock:
+        _image_ok.clear()
+
+
+def _ensure_image(client) -> None:
+    image = settings.SANDBOX_IMAGE
+    with _client_lock:
+        if image in _image_ok.get(client, ()):
+            return
+    # Check first: create would otherwise fail with a less useful 404.
+    client.images.get(image)
+    with _client_lock:
+        _image_ok.setdefault(client, set()).add(image)
+
+
+def _forget_image(client) -> None:
+    with _client_lock:
+        _image_ok.get(client, set()).discard(settings.SANDBOX_IMAGE)
 
 
 def _stdout_verdict(raw: bytes) -> tuple[str, dict | None]:
@@ -170,27 +210,29 @@ def run_command(challenge: Challenge, command: str, *, client=None,
     refused = sorted(set(host_overrides) - ALLOWED_HOST_OVERRIDES)
     if refused:
         raise ValueError(f'host_overrides not allowed: {", ".join(refused)}')
-    client = client or _get_client()
     b64 = base64.b64encode(command.encode()).decode()
     started = time.monotonic()
 
     try:
-        # Check first: create would otherwise fail with a less useful 404.
-        client.images.get(settings.SANDBOX_IMAGE)
+        client = client or _get_client()
+        _ensure_image(client)
         container = client.containers.create(
             settings.SANDBOX_IMAGE,
             command=[challenge.dir, challenge.slug, b64],
             **SANDBOX_RUN_PROFILE,
             **host_overrides,
         )
-    except docker.errors.DockerException as exc:
+    except docker.errors.ImageNotFound as exc:
+        _forget_image(client)
+        raise SandboxUnavailable(str(exc)) from exc
+    except _DOCKER_DOWN as exc:
         raise SandboxUnavailable(str(exc)) from exc
 
     try:
         try:
             # Inside the finally: a container that was created but never started is still removed.
             container.start()
-        except docker.errors.DockerException as exc:
+        except _DOCKER_DOWN as exc:
             raise SandboxUnavailable(str(exc)) from exc
         host_timed_out = False
         try:
@@ -225,17 +267,21 @@ def _created_at(container) -> datetime:
     return datetime.fromisoformat(f'{head}.{frac}').replace(tzinfo=timezone.utc)
 
 
-def reap_stale(max_age_s: float = 60, *, client=None) -> int:
+def reap_stale(max_age_s: float = 60, *, min_age_s: float = 0, client=None) -> int:
     """Force-remove labelled sandbox containers that never started, exited, or are older than ``max_age_s``.
 
-    Backstop for containers orphaned by a killed caller. Call it when no runs
-    from this host are in flight (app startup, start of ``verify_challenges``).
+    Backstop for containers orphaned by a killed caller. A container younger
+    than ``min_age_s`` is never removed, whatever its status. With the default
+    ``min_age_s=0`` (the harness) call it only when no runs are in flight; the
+    game uses ``GAME_REAP_MIN_AGE_S`` via ``reap_stale_once`` so it is safe anytime.
     """
     client = client or _get_client()
     now = datetime.now(timezone.utc)
     removed = 0
     for c in client.containers.list(all=True, filters={'label': SANDBOX_LABEL}):
         age = (now - _created_at(c)).total_seconds()
+        if age < min_age_s:
+            continue
         if c.status in ('created', 'exited', 'dead') or age > max_age_s:
             try:
                 c.remove(force=True, v=True)
@@ -243,3 +289,34 @@ def reap_stale(max_age_s: float = 60, *, client=None) -> int:
             except docker.errors.NotFound:
                 pass
     return removed
+
+
+def reap_stale_once() -> None:
+    """Reap orphans (older than ``GAME_REAP_MIN_AGE_S``) the first time it is called in this process.
+
+    Not called from ``AppConfig.ready()``: that also runs for migrate/test and must
+    not touch Docker. A Docker failure is logged and retried on the next call.
+    Callers that find a reap already in progress skip it rather than wait, so a
+    hung daemon can never queue requests here without a bound.
+    """
+    global _reaped_once
+    if not _reap_lock.acquire(blocking=False):
+        return
+    try:
+        if _reaped_once:
+            return
+        try:
+            reap_stale(min_age_s=GAME_REAP_MIN_AGE_S)
+        except _DOCKER_DOWN as exc:
+            logger.warning('reap_stale_once failed, will retry: %s', exc)
+            return
+        _reaped_once = True
+    finally:
+        _reap_lock.release()
+
+
+def _reset_reap_once() -> None:
+    """Test hook: make the next ``reap_stale_once`` run again."""
+    global _reaped_once
+    with _reap_lock:
+        _reaped_once = False

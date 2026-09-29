@@ -1,10 +1,12 @@
 import base64
 import importlib
+import threading
 from unittest import mock
 
 import docker
 import docker.errors
-from django.test import SimpleTestCase
+import requests.exceptions
+from django.test import SimpleTestCase, override_settings
 
 from challenges import catalog, sandbox
 from challenges.tests.fakes import FakeClient, FakeContainer, aged, runcmd_json
@@ -154,6 +156,21 @@ class RunCommandTests(SimpleTestCase):
         with self.assertRaises(sandbox.SandboxUnavailable):
             self.run_with(None, run_error=docker.errors.DockerException('daemon down'))
 
+    def test_client_creation_failure_raises_sandbox_unavailable(self):
+        with mock.patch.object(sandbox, '_get_client', side_effect=docker.errors.DockerException('no socket')):
+            with self.assertRaises(sandbox.SandboxUnavailable):
+                sandbox.run_command(self.ch, 'echo hello world')
+
+    def test_connection_error_before_container_raises_sandbox_unavailable(self):
+        with self.assertRaises(sandbox.SandboxUnavailable):
+            self.run_with(None, run_error=requests.exceptions.ConnectionError('daemon gone'))
+
+    def test_connection_error_on_start_removes_container_and_raises_unavailable(self):
+        c = FakeContainer(start_error=requests.exceptions.ConnectionError('daemon gone'))
+        with self.assertRaises(sandbox.SandboxUnavailable):
+            self.run_with(c)
+        self.assertEqual(c.removed_with, {'force': True, 'v': True})
+
     def test_rejects_commands_over_300_chars(self):
         with self.assertRaises(ValueError):
             sandbox.run_command(self.ch, 'x' * 301, client=FakeClient(FakeContainer()))
@@ -210,6 +227,38 @@ class LazyClientTests(SimpleTestCase):
             fe.assert_called_once()
         importlib.reload(sandbox)
 
+    def test_client_pool_is_sized_to_concurrency_cap(self):
+        fake = FakeClient(FakeContainer(logs=runcmd_json(Correct=True)))
+        with override_settings(SANDBOX_MAX_CONCURRENT=5), \
+                mock.patch.object(docker, 'from_env', return_value=fake) as fe:
+            importlib.reload(sandbox)
+            sandbox.run_command(catalog.get('hello_world'), 'echo hi')
+            fe.assert_called_once_with(max_pool_size=7)
+        importlib.reload(sandbox)
+
+
+class ImageCheckCacheTests(SimpleTestCase):
+    def setUp(self):
+        sandbox.clear_image_cache()
+        self.addCleanup(sandbox.clear_image_cache)
+        self.ch = catalog.get('hello_world')
+
+    def test_image_is_checked_once_per_client(self):
+        client = FakeClient(FakeContainer(logs=runcmd_json()))
+        sandbox.run_command(self.ch, 'echo a', client=client)
+        sandbox.run_command(self.ch, 'echo b', client=client)
+        self.assertEqual(len(client.images.requested), 1)
+
+    def test_image_not_found_on_create_invalidates_cache(self):
+        client = FakeClient(FakeContainer(logs=runcmd_json()))
+        sandbox.run_command(self.ch, 'echo a', client=client)
+        client.containers.run_error = docker.errors.ImageNotFound('gone')
+        with self.assertRaises(sandbox.SandboxUnavailable):
+            sandbox.run_command(self.ch, 'echo b', client=client)
+        client.containers.run_error = None
+        sandbox.run_command(self.ch, 'echo c', client=client)
+        self.assertEqual(len(client.images.requested), 2)
+
 
 class ReapStaleTests(SimpleTestCase):
     def test_removes_only_exited_or_old_labelled_containers(self):
@@ -226,3 +275,59 @@ class ReapStaleTests(SimpleTestCase):
         self.assertIsNone(fresh_running.removed_with)
         self.assertEqual(client.containers.list_calls,
                          [{'all': True, 'filters': {'label': 'bash-dash.sandbox'}}])
+
+    def test_min_age_protects_young_containers_whatever_their_status(self):
+        young_exited = FakeContainer(status='exited', created=aged(5))
+        young_created = FakeContainer(status='created', created=aged(29))
+        old_exited = FakeContainer(status='exited', created=aged(31))
+        old_running = FakeContainer(status='running', created=aged(120))
+        mid_running = FakeContainer(status='running', created=aged(45))
+        client = FakeClient(listed=[young_exited, young_created, old_exited, old_running, mid_running])
+        removed = sandbox.reap_stale(max_age_s=60, min_age_s=30, client=client)
+        self.assertEqual(removed, 2)
+        self.assertIsNone(young_exited.removed_with)
+        self.assertIsNone(young_created.removed_with)
+        self.assertIsNone(mid_running.removed_with)
+        self.assertEqual(old_exited.removed_with, {'force': True, 'v': True})
+        self.assertEqual(old_running.removed_with, {'force': True, 'v': True})
+
+
+class ReapStaleOnceTests(SimpleTestCase):
+    def setUp(self):
+        sandbox._reset_reap_once()
+        self.addCleanup(sandbox._reset_reap_once)
+
+    def test_reaps_once_per_process_with_game_min_age(self):
+        with mock.patch.object(sandbox, 'reap_stale', return_value=0) as rs:
+            sandbox.reap_stale_once()
+            sandbox.reap_stale_once()
+        rs.assert_called_once_with(min_age_s=sandbox.GAME_REAP_MIN_AGE_S)
+        self.assertEqual(sandbox.GAME_REAP_MIN_AGE_S, 30)
+
+    def test_docker_error_is_swallowed_and_retried_next_call(self):
+        with mock.patch.object(sandbox, 'reap_stale',
+                               side_effect=[docker.errors.DockerException('down'), 0, 0]) as rs:
+            with self.assertLogs('challenges.sandbox', level='WARNING'):
+                sandbox.reap_stale_once()
+            sandbox.reap_stale_once()
+            sandbox.reap_stale_once()
+        self.assertEqual(rs.call_count, 2)
+
+    def test_connection_error_is_swallowed_and_retried_next_call(self):
+        with mock.patch.object(sandbox, 'reap_stale',
+                               side_effect=[requests.exceptions.ConnectionError('gone'), 0]) as rs:
+            with self.assertLogs('challenges.sandbox', level='WARNING'):
+                sandbox.reap_stale_once()
+            sandbox.reap_stale_once()
+        self.assertEqual(rs.call_count, 2)
+
+    def test_concurrent_caller_skips_instead_of_waiting_for_a_reap_in_progress(self):
+        done = threading.Event()
+        with mock.patch.object(sandbox, 'reap_stale', return_value=0) as rs:
+            with sandbox._reap_lock:  # another thread is mid-reap
+                t = threading.Thread(target=lambda: (sandbox.reap_stale_once(), done.set()), daemon=True)
+                t.start()
+                self.assertTrue(done.wait(timeout=2), 'reap_stale_once blocked on a reap in progress')
+            rs.assert_not_called()
+            sandbox.reap_stale_once()  # the skipped caller did not mark the reap as done
+        rs.assert_called_once()

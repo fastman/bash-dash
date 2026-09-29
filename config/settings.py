@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-)0jim@t4fa=wd2^4k1%*1s^1=g^okunei$5+^&_&3#4w!m0$=c
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [h for h in os.environ.get('BASHDASH_ALLOWED_HOSTS', '').split(',') if h]
 
 
 # Application definition
@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'challenges',
+    'game',
 ]
 
 MIDDLEWARE = [
@@ -78,6 +79,14 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        # Concurrent game writers: WAL + IMMEDIATE + busy timeout. ATOMIC_REQUESTS stays
+        # False — never hold a transaction open across a sandbox run.
+        # WAL note: back up with `sqlite3 db.sqlite3 ".backup …"`, not cp.
+        'OPTIONS': {
+            'transaction_mode': 'IMMEDIATE',
+            'timeout': 20,
+            'init_command': 'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL',
+        },
     }
 }
 
@@ -134,3 +143,7 @@ MAILERS = {
 SANDBOX_IMAGE = os.environ.get('BASHDASH_SANDBOX_IMAGE', 'bash-dash-sandbox:latest')
 CHALLENGES_YAML = BASE_DIR / 'sandbox/internal/challenge/challenges.yaml'
 CHALLENGES_EXCLUDED = BASE_DIR / 'challenges/excluded.yaml'
+
+# Game sandbox concurrency (S-01). Per process: total = worker processes × cap.
+SANDBOX_MAX_CONCURRENT = int(os.environ.get('BASHDASH_SANDBOX_CONCURRENCY', 8))
+SANDBOX_QUEUE_TIMEOUT_S = 10

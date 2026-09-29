@@ -1,0 +1,21 @@
+{% extends 'game/base.html' %}
+{% block content %}
+<section class="rules">
+  <h1>How to play</h1>
+  <ul>
+    <li>Solve bash challenges in order, one at a time. You can't skip a challenge.</li>
+    <li>Type a bash command. It runs in a sandbox and you see its output and whether it solved the challenge.</li>
+    <li>Every command you run counts as an attempt, including <code>ls</code> and <code>cat</code>.</li>
+    <li>Fewer attempts is better.</li>
+    <li>You have 5 minutes.</li>
+  </ul>
+</section>
+<form method="post" action="{% url 'game:start' %}" class="start">
+  {% csrf_token %}
+  <label for="nick">Your nick</label>
+  <input id="nick" name="nick" type="text" maxlength="20" required value="{{ nick|default:'' }}"
+         autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <button type="submit">Start</button>
+</form>
+{% endblock %}

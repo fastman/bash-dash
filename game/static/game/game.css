@@ -1,0 +1,127 @@
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --fg: #e6edf3;
+  --muted: #8b949e;
+  --accent: #3fb950;
+  --bad: #f85149;
+  --warn: #d29922;
+  --border: #30363d;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 12px 16px 32px;
+}
+
+.brand {
+  font-family: var(--mono);
+  color: var(--accent);
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+h1 { font-size: 1.25rem; margin: 4px 0 8px; }
+
+code, pre, input, .prompt, .last-command { font-family: var(--mono); }
+
+code {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+pre {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+}
+
+.rules ul { padding-left: 1.2rem; }
+.rules li { margin: 4px 0; }
+
+.start { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+
+input[type=text] {
+  width: 100%;
+  min-width: 0;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 16px; /* >= 16px stops iOS zooming on focus */
+}
+
+input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+button {
+  background: var(--accent);
+  color: #04120a;
+  border: 0;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+button:disabled, input:disabled { opacity: 0.6; }
+
+.error { color: var(--bad); margin: 0; }
+
+.counters {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.counters strong { color: var(--fg); }
+
+.index { color: var(--muted); margin: 8px 0 0; font-family: var(--mono); }
+
+.description { overflow-wrap: anywhere; }
+
+.command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+
+.prompt { color: var(--accent); font-weight: bold; }
+
+.verdict { min-height: 1.5em; margin: 4px 0; font-weight: bold; }
+.verdict.ok { color: var(--accent); }
+.verdict.bad { color: var(--bad); }
+.verdict.warn { color: var(--warn); }
+.verdict.running { color: var(--muted); }
+
+.last-command { color: var(--muted); margin: 0; font-size: 0.85rem; overflow-wrap: anywhere; }
+
+.output {
+  max-height: 50vh;
+  overflow: auto;
+  white-space: pre;
+  min-height: 3em;
+}
+
+.done p { font-size: 1.1rem; }
