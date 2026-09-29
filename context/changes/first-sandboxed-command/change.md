@@ -1,7 +1,7 @@
 ---
 change_id: first-sandboxed-command
 title: First sandboxed command
-status: implementing
+status: impl_reviewed
 created: 2026-09-29
 updated: 2026-09-29
 archived_at: null

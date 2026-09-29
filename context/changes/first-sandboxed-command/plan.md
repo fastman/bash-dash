@@ -509,6 +509,41 @@ Answer the roadmap unknown ("~1 s at ~15 concurrent players?") with numbers from
 - Runner: `challenges/sandbox.py:155-245`; catalog: `challenges/catalog.py:68-88`; test fakes: `challenges/tests/fakes.py`
 - PRD: `context/foundation/prd.md` (US-01, FR-002–FR-005, NFRs, Business Logic, Non-Goals)
 
+## Implementation Addenda
+
+Behaviour added during implementation and the implementation review (`reviews/impl-review.md`). It was not in the original contract above. S-02 and S-03 should treat it as part of the contract.
+
+**`POST /play/command` request handling**
+- A malformed body gets 400 `{"status": "bad_request", "message": "Malformed request."}`. Malformed means any of these:
+  - invalid JSON, or JSON nested too deeply;
+  - a missing `command`, or a `command` that is not a string;
+  - a `command` that is not UTF-8 encodable, such as a lone surrogate.
+- A body over 4 KB (`views.MAX_BODY_BYTES`) gets 413 with the same `bad_request` status, before it is parsed.
+
+**`POST /play/command` responses**
+- Every response carries a top-level `message`. For `ran`, it matches `result.message`.
+- A counted run that is wrong and has no player error gets the verdict "Incorrect.".
+- With no game, the 403 body is only `{"status": "no_game", "message": ...}`, without counters or challenge.
+
+**Attempt counting**
+- A run whose game finished while it was running returns `finished` (409). It is neither counted nor stored.
+- The guarded `attempts` update runs first and gates the `Attempt` insert, so the rows and the counter always agree. S-02's time limit should reuse this guard.
+
+**Sandbox and reaping**
+- `requests.exceptions.RequestException` counts as "Docker down" (`SandboxUnavailable` → 503), as do client-creation failures.
+- `reap_stale_once` skips instead of waiting when another thread is mid-reap.
+
+**Pages and admin**
+- `/done` with an active game redirects to `/play`.
+- `play.html` shows the last command above its output.
+- `play.js` rejects a blank command client-side.
+- The nick input has autocapitalize, autocorrect and autocomplete turned off.
+- The admin has `search_fields = ('nick',)`.
+
+**Tests**
+- `game/tests/test_bench.py` unit-tests `bench_game`'s exit codes.
+- Shared test doubles live in `challenges/tests/fakes.py` (`write_excluded`) and `game/tests/fakes.py` (`result`).
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.
