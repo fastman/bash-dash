@@ -1,35 +1,21 @@
 ---
 project: "bash-dash"
-context_type: greenfield
+version: 1
+status: draft
 created: 2026-09-29
-updated: 2026-09-29
-checkpoint:
-  current_phase: 8
-  phases_completed: [1, 2, 3, 4, 5, 6, 7]
-  gray_areas_resolved:
-    - topic: "primary persona"
-      decision: "uczestnik hackathonu; obsługa stoiska jako secondary"
-    - topic: "insight"
-      decision: "gra pokazuje umiejętności; dociekliwość to sygnał; ranking tworzy ruch"
-    - topic: "hall of fame access"
-      decision: "ZMIENIONE w fazie 4: tylko dla obsługi, wyświetlany na ekranie przy stoisku razem z QR; brak publicznego rankingu"
-    - topic: "event token"
-      decision: "rotujący token w QR na ekranie rankingu; pozwala rozpocząć grę przez ok. 15 min; rozpoczęta sesja trwa pełne 5 min"
-    - topic: "email"
-      decision: "nie zbieramy; tylko nick"
-    - topic: "nick uniqueness"
-      decision: "nieunikalny; identyfikacja po kodzie 6-cyfrowym"
-    - topic: "one attempt per person"
-      decision: "miękka blokada w przeglądarce, nice-to-have"
-    - topic: "timeline"
-      decision: "wydarzenie 2026-10-03 (4 dni); tniemy zakres; mvp_weeks: 1"
-  frs_drafted: 14
-  quality_check_status: accepted
+context_type: greenfield
+product_type: web-app
+target_scale:
+  users: large  # ankieta: „do dziesięciu tysięcy”; idea.md szacuje dziesiątki do kilkuset graczy w trakcie wydarzenia
+  # TODO: target_scale.qps — see Open Questions
+  # TODO: target_scale.data_volume — see Open Questions
+timeline_budget:
+  mvp_weeks: 1
+  hard_deadline: 2026-10-03
+  after_hours_only: false
 ---
 
-# bash-dash — shape notes
-
-Źródło wejściowe: `context/foundation/idea.md`.
+# bash-dash — PRD
 
 ## Vision & Problem Statement
 
@@ -55,39 +41,6 @@ Na koniec dostaje wynik, miejsce w rankingu i 6-cyfrowy kod, z którym odbiera n
 ### Secondary persona
 **Obsługa stoiska.** Weryfikuje wynik po 6-cyfrowym kodzie, wydaje nagrody, moderuje nicki
 w Hall of fame. Firma (rekrutacja) jest beneficjentem, a nie bezpośrednim użytkownikiem.
-
-## Access Control
-
-Trzy role, bez kont użytkowników:
-
-| Rola | Jak wchodzi | Co może |
-|---|---|---|
-| **Gracz** (uczestnik) | Skanuje kod QR wyświetlany na ekranie przy stoisku. Adres zawiera krótko ważny token (ok. 15 min). Podaje nick (wymagany, nieunikalny). E-maila nie zbieramy. | Rozpocząć sesję gry, wysyłać komendy, zobaczyć podsumowanie i swój 6-cyfrowy kod. |
-| **Obsługa stoiska** | Logowanie hasłem. | Oglądać Hall of fame razem z aktualnym kodem QR (widok na ekran przy stoisku), ustawiać czas ważności tokenu, wyszukiwać po kodzie, ukrywać nicki (dyskwalifikacja), oznaczać wydanie nagrody. |
-
-- Nie ma publicznego rankingu. Hall of fame razem z QR widzi tylko zalogowana obsługa, która
-  wyświetla go na ekranie przy stoisku.
-- Token w kodzie QR pozwala **rozpocząć** grę tylko przez ok. 15 minut od wygenerowania. Grę mogą
-  więc zacząć osoby fizycznie przy stoisku, a nie z domu. Sesja rozpoczęta w oknie ważności trwa
-  pełne 5 minut, nawet jeśli token w tym czasie wygaśnie.
-- Wejście z wygasłym tokenem albo bez tokenu kończy się odmową z informacją „zeskanuj kod przy
-  stoisku”, a nie ekranem startowym.
-- Identyfikacja gracza przy odbiorze nagrody odbywa się wyłącznie po 6-cyfrowym kodzie.
-  Nick nie jest identyfikatorem.
-- Jedno podejście na osobę: miękka blokada w przeglądarce (nice-to-have). Obejście przez tryb
-  incognito jest akceptowane.
-- Dane osobowe: zbieramy tylko nick, więc nie potrzeba procedur RODO.
-
-## MVP flow
-
-1. Uczestnik skanuje QR przy stoisku (adres z tokenem wydarzenia).
-2. Ekran startowy: zasady (5 min, zadania po kolei, każda komenda to podejście), nick, „Start”.
-3. Serwer zakłada sesję i zapisuje czas startu.
-4. Opis zadania i terminal. Gracz wpisuje komendę, widzi wyjście oraz informację „poprawne/niepoprawne”.
-5. Po poprawnej odpowiedzi przechodzi do następnego zadania. Pętla trwa do końca 5 minut lub do rozwiązania wszystkich zadań.
-6. Podsumowanie: liczba rozwiązanych zadań, liczba podejść, miejsce w rankingu, 6-cyfrowy kod, CTA.
-7. Gracz podchodzi do stoiska. Obsługa wyszukuje kod w panelu i wydaje nagrodę.
-   Równolegle na ekranie przy stoisku działa Hall of fame.
 
 ## Success Criteria
 
@@ -196,6 +149,15 @@ Numeracja jest stabilna. FR-009, FR-014 i FR-015 usunięto w rundzie sokratejski
 - ~~FR-015: ukryta nagroda (odpowiedzi celowo w danych strony)~~. Usunięte: nie umieszczamy
   odpowiedzi celowo. Kto „schakuje” system, zasługuje na 42/42.
 
+## Non-Functional Requirements
+
+- Awaria i odtworzenie serwisu traci wyniki i kody z najwyżej ostatnich ok. 5 minut.
+- Komenda jednego gracza (np. fork bomba, pętla, zajęcie CPU lub pamięci) nie wpływa na
+  możliwość gry innych ani na dostępność serwisu. Każda komenda kończy się (wynikiem lub
+  przekroczeniem czasu) w ≤ ok. 6 s.
+- Pełną rozgrywkę da się przejść w aktualnej mobilnej przeglądarce (Chrome na Androidzie, Safari
+  na iOS) na danych komórkowych, bez zależności od Wi-Fi organizatora.
+
 ## Business Logic
 
 Gracze są szeregowani według liczby rozwiązanych zadań (malejąco), przy remisie według liczby
@@ -213,14 +175,27 @@ stoisku. Nicki ukryte przez obsługę (dyskwalifikacja) nie występują w rankin
 rozwiązania służy wyłącznie do rozstrzygania remisów i **nie jest pokazywany** na ekranie Hall of
 fame, żeby go nie zaciemniać. Nie ma punktów za trudność zadania.
 
-## Non-Functional Requirements
+## Access Control
 
-- Awaria i odtworzenie serwisu traci wyniki i kody z najwyżej ostatnich ok. 5 minut.
-- Komenda jednego gracza (np. fork bomba, pętla, zajęcie CPU lub pamięci) nie wpływa na
-  możliwość gry innych ani na dostępność serwisu. Każda komenda kończy się (wynikiem lub
-  przekroczeniem czasu) w ≤ ok. 6 s.
-- Pełną rozgrywkę da się przejść w aktualnej mobilnej przeglądarce (Chrome na Androidzie, Safari
-  na iOS) na danych komórkowych, bez zależności od Wi-Fi organizatora.
+Trzy role, bez kont użytkowników:
+
+| Rola | Jak wchodzi | Co może |
+|---|---|---|
+| **Gracz** (uczestnik) | Skanuje kod QR wyświetlany na ekranie przy stoisku. Adres zawiera krótko ważny token (ok. 15 min). Podaje nick (wymagany, nieunikalny). E-maila nie zbieramy. | Rozpocząć sesję gry, wysyłać komendy, zobaczyć podsumowanie i swój 6-cyfrowy kod. |
+| **Obsługa stoiska** | Logowanie hasłem. | Oglądać Hall of fame razem z aktualnym kodem QR (widok na ekran przy stoisku), ustawiać czas ważności tokenu, wyszukiwać po kodzie, ukrywać nicki (dyskwalifikacja), oznaczać wydanie nagrody. |
+
+- Nie ma publicznego rankingu. Hall of fame razem z QR widzi tylko zalogowana obsługa, która
+  wyświetla go na ekranie przy stoisku.
+- Token w kodzie QR pozwala **rozpocząć** grę tylko przez ok. 15 minut od wygenerowania. Grę mogą
+  więc zacząć osoby fizycznie przy stoisku, a nie z domu. Sesja rozpoczęta w oknie ważności trwa
+  pełne 5 minut, nawet jeśli token w tym czasie wygaśnie.
+- Wejście z wygasłym tokenem albo bez tokenu kończy się odmową z informacją „zeskanuj kod przy
+  stoisku”, a nie ekranem startowym.
+- Identyfikacja gracza przy odbiorze nagrody odbywa się wyłącznie po 6-cyfrowym kodzie.
+  Nick nie jest identyfikatorem.
+- Jedno podejście na osobę: miękka blokada w przeglądarce (nice-to-have). Obejście przez tryb
+  incognito jest akceptowane.
+- Dane osobowe: zbieramy tylko nick, więc nie potrzeba procedur RODO.
 
 ## Non-Goals
 
@@ -251,51 +226,6 @@ Niefunkcjonalne:
 - **Brak twardej blokady powtórnej gry.** Blokada w przeglądarce jest tylko miękka
   (nice-to-have), a obejście przez incognito jest akceptowane.
 
-## Product framing
-
-- `product_type: web-app`
-- `target_scale.users: large` (ankieta: „do dziesięciu tysięcy”; idea.md szacuje dziesiątki do
-  kilkuset graczy w trakcie wydarzenia)
-- `timeline_budget.mvp_weeks: 1`
-- `timeline_budget.hard_deadline: 2026-10-03`
-- `timeline_budget.after_hours_only: false` (praca w ramach dnia roboczego)
-- Pytanie kontrolne o 100x skalę: reguła rankingu się nie zmienia. Wąskim gardłem byłaby
-  przepustowość wykonywania komend (kontener na każdą komendę). Na to wydarzenie akceptowane.
-
-## Timeline budget
-
-- `mvp_weeks: 1`: zakres świadomie przycięty. Termin wydarzenia to 2026-10-03, czyli 4 dni od
-  rozpoczęcia prac (2026-09-29). Decyzja: tniemy zakres do must-have na dzień wydarzenia.
-
-## Quality cross-check
-
-Uruchomiony 2026-09-29. Wszystkie elementy obecne (Access Control, Business Logic, artefakty,
-akceptacja kosztu czasu, Non-Goals). Brak luk. Otwarte kwestie są w `## Open Questions`.
-
-## Forward: tech-stack
-
-Informacyjnie, poza PRD. Decyzje już podjęte w `idea.md` (sekcja 5) do potwierdzenia na etapie
-wyboru stacku:
-- Nowy projekt w Pythonie na Django (Django admin jako panel obsługi), a nie fork cmdchallenge.
-- `sandbox/`: skopiowany moduł Go z cmdchallenge (`cmd/`, `internal/`, `var/`, `go.mod`,
-  `Dockerfile-cmd`) plus LICENSE (MIT, zachować copyright). Służy tylko do zbudowania obrazu `cmd`.
-  Weryfikacja (checks i randomizery) zostaje w Go, wewnątrz kontenera. Backend czyta JSON
-  `CmdResponse` ze stdout.
-- Uruchamianie kontenera przez Python Docker SDK. Lista, opisy i kolejność zadań czytane
-  z `challenges.yaml` (filtr: brak tagów).
-- Frontend: szablony Django plus trochę JS (jquery.terminal albo prostsze pole z historią).
-- SQLite, jedna dedykowana VM, snapshot, kopia bazy poza VM co kilka minut, HTTPS (np. Caddy).
-- Utwardzenie kontenera: `network_mode=none`, limit pamięci, `pids_limit`, `nano_cpus`,
-  `cap_drop=ALL` (do sprawdzenia), usuwanie kontenera, timeout hosta ok. 6 s, limit długości
-  komendy 300 znaków, rate limit per sesja, brak publicznych endpointów diagnostycznych.
-- Architektura amd64/arm64 (`BUILD_ARCH`). Przy przycięciu zakresu wystarczy jedna.
-
-## Forward: technical-roadmap
-
-- Przed wydarzeniem: uruchomić wzorcowe rozwiązania (`example`) wszystkich 42 zadań pod
-  docelowym utwardzeniem i wyciąć te, które nie przechodzą.
-- Przetestować scenariusz przywrócenia VM ze snapshotu razem z odtworzeniem bazy z kopii.
-
 ## Open Questions
 
 1. **Jakie jest status quo i jego koszt?** Pierwsze takie wydarzenie, brak danych o tym, jak
@@ -309,3 +239,7 @@ wyboru stacku:
 5. **Hosting VM i domena.** Właściciel: użytkownik. Termin: przed 2026-10-03. Blokuje wdrożenie.
 6. **Domyślny czas ważności tokenu QR i częstotliwość jego rotacji.** Przyjęto ok. 15 minut,
    z możliwością zmiany przez obsługę. Właściciel: użytkownik.
+7. **Jaki jest spodziewany szczytowy ruch (`target_scale.qps`)?** Brak w notatkach. Właściciel:
+   użytkownik.
+8. **Jaka jest spodziewana skala danych (`target_scale.data_volume`)?** Brak w notatkach.
+   Właściciel: użytkownik.
