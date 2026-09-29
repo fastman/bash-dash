@@ -40,7 +40,7 @@ techniczna (integracja, utwardzenie, ok. 6 s na komendę).
 | ---- | ----------------------------- | -------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------- | -------- |
 | F-01 | sandbox-image-and-task-cut    | (foundation) obraz sandboxa zbudowany, zadania główne przetestowane pod utwardzeniem, niedziałające wycięte | —             | NFR (izolacja komend), FR-004               | done     |
 | F-02 | event-vm-deploy               | (foundation) aplikacja działa na docelowej VM pod HTTPS, z kopią bazy poza VM i przećwiczonym odtworzeniem | —             | NFR (trwałość ~5 min), NFR (mobilna przeglądarka) | blocked  |
-| S-01 | first-sandboxed-command       | gracz podaje nick, startuje i rozwiązuje zadania po kolei komendami wykonywanymi w sandboxie             | F-01          | US-01, FR-002, FR-003, FR-004, FR-005       | proposed |
+| S-01 | first-sandboxed-command       | gracz podaje nick, startuje i rozwiązuje zadania po kolei komendami wykonywanymi w sandboxie             | F-01          | US-01, FR-002, FR-003, FR-004, FR-005       | done     |
 | S-02 | server-side-time-limit        | gracz widzi pozostały czas, po odświeżeniu wraca do tej samej sesji, a gra kończy się po 5 min lub po wszystkich zadaniach | S-01          | US-01, FR-006, FR-007                       | proposed |
 | S-03 | summary-with-prize-code       | gracz po zakończeniu gry widzi liczbę zadań, podejść, miejsce w rankingu i unikalny 6-cyfrowy kod        | S-02          | US-01, FR-008                               | proposed |
 | S-04 | staff-code-lookup-and-prize   | obsługa loguje się hasłem, znajduje wynik po kodzie i oznacza „nagroda wydana”                          | S-03          | US-01, FR-011, FR-013                       | proposed |
@@ -118,7 +118,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - (c) `run_command` wywołuje `images.get` przy każdej komendzie; można to zbuforować po pierwszym sukcesie (obraz zmienia się tylko przy wdrożeniu).
   - (d) `catalog.get(slug)` zwraca też zadania wycięte — S-01 musi serwować zadania z `catalog.main_set()`.
 - **Risk:** north star i największa niewiadoma; idzie tak wcześnie, jak pozwala F-01, żeby problemy z integracją lub wydajnością sandboxa wyszły w pierwszym dniu, a nie w ostatnim.
-- **Status:** proposed
+- **Status:** done
 
 ### S-02: Limit 5 minut pilnowany przez serwer
 
@@ -227,3 +227,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ## Done
 
 - **F-01: (foundation) obraz sandboxa z zestawem głównym zadań buduje się z repo; wzorcowe rozwiązania wszystkich zadań zostały uruchomione pod docelowym utwardzeniem, a zadania, które nie przechodzą, są wycięte z listy.** — Archived 2026-09-29 → `context/archive/2026-09-29-sandbox-image-and-task-cut/`. Lesson: —.
+- **S-01: gracz czyta zasady, podaje nick, klika „Start” i rozwiązuje zadania po kolei, wpisując komendy wykonywane w sandboxie; widzi wyjście i informację „poprawne/niepoprawne”, a każda komenda zwiększa licznik podejść.** — Archived 2026-09-29 → `context/archive/2026-09-29-first-sandboxed-command/`. Lesson: —.
