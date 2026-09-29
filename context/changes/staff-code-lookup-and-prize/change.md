@@ -1,7 +1,7 @@
 ---
 change_id: staff-code-lookup-and-prize
 title: Staff code lookup and prize issuing
-status: implemented
+status: impl_reviewed
 created: 2026-09-29
 updated: 2026-09-29
 archived_at: null
