@@ -49,6 +49,7 @@ Verify: `uv run python manage.py test game challenges` is green. Then play two o
 - Making codes hard to guess or rate-limited. The PRD accepts that staff also ask for the nick (FR-011 note).
 - Changing how games finish, how attempts are counted, or the time limit.
 - JS changes. `/done` is a server-rendered page, and `play.js` already navigates there.
+- Excluding test games from the ranking (review F3). Staff test games and `bench_game --keep` games count in every place and in the total M. Operational step: clear the database before the event.
 
 ## Implementation Approach
 
