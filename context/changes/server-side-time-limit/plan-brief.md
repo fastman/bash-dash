@@ -25,27 +25,27 @@ Made without live Q&A (background run). Each one is the ⭐ recommended default,
 | Expiry              | Lazy on every read, plus bulk `expire_overdue()`              | No worker or cron exists; one indexed UPDATE per request is negligible.                     |
 | Timeout stamp       | `finished_at = deadline_at`                                   | The end time is the limit, not whenever someone next looked.                               |
 | `current_slug`      | Kept on timeout                                               | Lets an in-flight solve be credited, and records where the player stopped.                  |
-| Client timer        | Server `remaining_ms` plus `performance.now()`, resynced per response | Immune to phone clock changes and to tab suspension.                                 |
+| Client timer        | Server `remaining_ms` plus `performance.now()`, resynced per response and via `GET /play/state` when the tab becomes visible | Immune to phone clock changes. The resync covers suspended tabs, where `performance.now()` can pause. |
 | Late command        | New 409 `time_up` / "Time's up.", with no sandbox run         | Distinct from `finished`, and saves sandbox capacity.                                      |
 | Grace-solve times   | `last_solved_at` / `finished_at` capped at `deadline_at`      | S-03 tie-breaks never see times past the limit.                                            |
 | Tests               | Backdate `deadline_at` in the DB; race via `run_command` side effect | Matches existing test style, with no time mocking.                                  |
 
 ## Scope
 
-**In scope:** `deadline_at` plus migration and backfill, the `GAME_DURATION_S` setting (env `BASHDASH_GAME_DURATION_S`), lazy and bulk expiry, the sent-before cut-off, `remaining_ms` in the play page and command JSON, the countdown JS with low-time cue and end-of-game lock, the reason heading on `/done`, the rules text taken from the setting, and the admin column.
+**In scope:** `deadline_at` plus migration and backfill, the `GAME_DURATION_S` setting (env `BASHDASH_GAME_DURATION_S`), lazy and bulk expiry, the sent-before cut-off, `remaining_ms` in the play page and command JSON, the countdown JS with low-time cue, end-of-game lock and a `GET /play/state` resync, the reason heading on `/done`, the rules text taken from the setting, and the admin column.
 
 **Out of scope:** a background sweeper, the full summary, rank and prize code (S-03), cross-browser resume, extending or pausing time, refunding latency, the soft block on a second game (FR-016), and JS test infrastructure.
 
 ## Architecture / Approach
 
-The service layer owns time. `start_game` stamps the deadline. `expire_overdue()` is a single UPDATE that sets `finished_at = deadline_at` on overdue unfinished games. Views call it for the session's game on every request, and `submit_command` calls it at entry and again after recording. The entry check (`now >= deadline_at` → `time_up`) enforces "sent after doesn't count". `_record`'s guard is widened so a sent-before run on an already-expired game still counts, and the solve update never clears an existing `finished_at`. The client displays `remaining_ms` against a monotonic clock and defers to the server on every response.
+The service layer owns time. `start_game` stamps the deadline from the same instant as `started_at` (which moves from `auto_now_add` to `default=timezone.now`). `GameSession.timed_out` and a matching query condition define "the clock ended this game" once. `expire_overdue()` is a single UPDATE that sets `finished_at = deadline_at` on overdue unfinished games. Views call it for the session's game on every request, and `submit_command` calls it at entry and again after recording. Fully solved games answer `finished` first. Then the entry check (`now >= deadline_at` → `time_up`) enforces "sent after doesn't count". `_record`'s guard is widened so a sent-before run on an already-expired game still counts, and the solve update never clears an existing `finished_at`. The client displays `remaining_ms` against a monotonic clock and defers to the server on every response.
 
 ## Phases at a Glance
 
 | Phase                                   | What it delivers                                                        | Key risk                                                                      |
 | --------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | 1. Server-side deadline and enforcement | Limit fully enforced; `time_up` responses; `remaining_ms` in JSON; tests | The solve update un-finishing a timed-out game (explicitly guarded and tested) |
-| 2. Countdown and end-of-game UX         | Visible timer, reload-safe; lock at 0; "Time's up!" on `/done`          | Mobile tab suspension and clock skew (monotonic clock plus ~1 s buffer)        |
+| 2. Countdown and end-of-game UX         | Visible timer, reload-safe; lock at 0; "Time's up!" on `/done`          | Mobile tab suspension and clock skew (server resync on return, plus ~1 s buffer)        |
 
 **Prerequisites:** S-01 merged (done). The baseline 53 game tests are green.
 **Estimated effort:** about 1 session, 2 phases.
