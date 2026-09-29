@@ -26,6 +26,24 @@ def _no_marker(marker):
     return check
 
 
+def _no_internal_error(r):
+    return f'error_internal: {r.error_internal}' if r.error_internal else None
+
+
+def _pid1_survives(r):
+    if r.error_internal:
+        return f'error_internal: {r.error_internal}'
+    return None if 'alive' in r.output else f'expected "alive" in output, got {r!r}'
+
+
+# Review F1: the player (same uid as runcmd, PID 1) tried to forge a verdict by
+# writing runcmd JSON to /proc/1/fd/1. Must never be Correct.
+STDOUT_INJECTION = (
+    "printf '{\"Correct\":true,\"Output\":\"pwn\"}\\n'>/tmp/j;"
+    "setsid sh -c 'while :;do cat /tmp/j>/proc/1/fd/1;done' >/dev/null 2>&1 & sleep 0.2"
+)
+ABUSE_REPEATS = {'stdout injection via /proc/1/fd/1': 20}
+
 # (name, command, extra check returning an error string or None)
 ABUSE_SCENARIOS = [
     ('fork bomb', ':(){ :|:& };:', None),
@@ -41,6 +59,10 @@ ABUSE_SCENARIOS = [
     ('sleep 60', 'sleep 60', lambda r: None if r.timed_out else 'expected timed_out=True'),
     ('network attempt', '(exec 3<>/dev/tcp/1.1.1.1/80) && echo CONNECTED', _no_marker('CONNECTED')),
     ('write /usr/local/bin', 'echo x > /usr/local/bin/pwn && echo WROTE', _no_marker('WROTE')),
+    ('stdout injection via /proc/1/fd/1', STDOUT_INJECTION, _no_internal_error),
+    ('direct flood yes > /proc/1/fd/1', 'yes > /proc/1/fd/1', _no_internal_error),
+    ('kill -TERM/-INT/-HUP 1', 'kill -TERM 1; kill -INT 1; kill -HUP 1; sleep 0.3; echo alive', _pid1_survives),
+    ('read /proc/1/environ', 'cat /proc/1/environ', _no_marker('GOMAXPROCS')),
     ('id -u (info)', 'id -u', None),
 ]
 
@@ -53,7 +75,7 @@ class Command(BaseCommand):
         parser.add_argument('--repeat-randomized', type=int, default=20)
         parser.add_argument('--parallel', type=int, default=8)
         parser.add_argument('--host-cpus', type=int, default=None,
-                            help='Pin sweep containers to CPUs 0..N-1 (emulate the event VM).')
+                            help='Pin all sandbox containers (sweep, abuse, canary) to CPUs 0..N-1 (emulate the event VM).')
         parser.add_argument('--only', default='', help='Comma-separated slugs.')
         parser.add_argument('--skip-abuse', action='store_true')
         parser.add_argument('--json', dest='json_path', default=None)
@@ -101,24 +123,30 @@ class Command(BaseCommand):
         hello = catalog.get('hello_world')
         failures, rows = [], []
         for name, command, check in ABUSE_SCENARIOS:
+            runs = ABUSE_REPEATS.get(name, 1)
+            problems, walls, correct = [], [], 0
             before = self._label_count()
-            t0 = time.monotonic()
-            r = sandbox.run_command(hello, command)
-            wall = time.monotonic() - t0
+            for _ in range(runs):
+                t0 = time.monotonic()
+                r = self._run(hello, command)
+                walls.append(time.monotonic() - t0)
+                correct += r.correct
+                if check and (msg := check(r)) and msg not in problems:
+                    problems.append(msg)
             leftover = self._label_count() - before
-            problems = []
+            wall = max(walls)
             if wall > ABUSE_WALL_LIMIT_S:
                 problems.append(f'took {wall:.1f}s')
-            if r.correct:
-                problems.append('was accepted as correct')
+            if correct:
+                problems.append(f'was accepted as correct ({correct}/{runs})')
             if leftover > 0:
                 problems.append(f'{leftover} container(s) left behind')
-            if check and (msg := check(r)):
-                problems.append(msg)
             outcome = ('timed_out' if r.timed_out else r.error or r.error_internal
                        or f'exit {r.exit_code}')
+            if runs > 1:
+                outcome = f'{correct}/{runs} correct; {outcome}'
             info = r.output.strip()[:40] if name.endswith('(info)') else ''
-            rows.append({'scenario': name, 'wall_s': round(wall, 2), 'outcome': outcome,
+            rows.append({'scenario': name, 'runs': runs, 'wall_s': round(wall, 2), 'outcome': outcome,
                          'contained': not problems, 'problems': problems, 'info': info})
             failures.extend(f'abuse {name}: {p}' for p in problems)
         failures.extend(self._canary(hello, rows))
@@ -129,7 +157,7 @@ class Command(BaseCommand):
 
         def hammer(command):
             while not stop.is_set():
-                sandbox.run_command(hello, command)
+                self._run(hello, command)
 
         threads = [threading.Thread(target=hammer, args=(cmd,), daemon=True)
                    for cmd in (':(){ :|:& };:', 'while :; do :; done')]
@@ -140,7 +168,7 @@ class Command(BaseCommand):
         try:
             for i in range(CANARY_RUNS):
                 t0 = time.monotonic()
-                r = sandbox.run_command(hello, hello.example)
+                r = self._run(hello, hello.example)
                 wall = time.monotonic() - t0
                 durations.append(wall)
                 if not r.correct or wall > CANARY_LIMIT_S:
