@@ -587,11 +587,11 @@ Behaviour added during implementation and the implementation review (`reviews/im
 
 #### Manual
 
-- [ ] 3.6 Play first 5 challenges at phone width: output, verdict, advance and attempts counter behave
+- [x] 3.6 Play first 5 challenges at phone width: output, verdict, advance and attempts counter behave
 - [x] 3.7 Reload mid-game restores challenge, counters and last output — b74576f
 - [x] 3.8 Fork bomb and `sleep 60` return within ~6 s as timed out and are counted — b74576f
-- [ ] 3.9 Large output scrolls inside the output box
-- [ ] 3.10 Sandbox unavailable shows retry message, attempt not counted, command kept
+- [x] 3.9 Large output scrolls inside the output box
+- [x] 3.10 Sandbox unavailable shows retry message, attempt not counted, command kept
 
 ### Phase 4: Concurrency measurement and mobile check
 
@@ -605,5 +605,5 @@ Behaviour added during implementation and the implementation review (`reviews/im
 #### Manual
 
 - [x] 4.5 `verification.md` records 15-player p50/p95 with a verdict on the ~1 s unknown — a689452
-- [ ] 4.6 Real phone over LAN: keyboard settings, send-to-submit, readable output
+- [x] 4.6 Real phone over LAN: keyboard settings, send-to-submit, readable output
 - [x] 4.7 F-02 concurrency contract written down in `verification.md` — a689452
