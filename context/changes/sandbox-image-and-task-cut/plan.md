@@ -431,15 +431,15 @@ None. There is no data, and this is the first app in the project.
 
 #### Automated
 
-- [x] 3.1 Full sweep green after the cut: `uv run python manage.py verify_challenges` exits 0
-- [x] 3.2 Emulated event-VM sweep green: `verify_challenges --host-cpus 2 --skip-abuse` exits 0
-- [x] 3.3 All tests pass, integration tests not skipped locally
-- [x] 3.4 No leaked sandbox containers
-- [x] 3.5 Excluded list is valid; `main_set()` size = 42 − cuts
+- [x] 3.1 Full sweep green after the cut: `uv run python manage.py verify_challenges` exits 0 — d76d456
+- [x] 3.2 Emulated event-VM sweep green: `verify_challenges --host-cpus 2 --skip-abuse` exits 0 — d76d456
+- [x] 3.3 All tests pass, integration tests not skipped locally — d76d456
+- [x] 3.4 No leaked sandbox containers — d76d456
+- [x] 3.5 Excluded list is valid; `main_set()` size = 42 − cuts — d76d456
 
 #### Manual
 
-- [x] 3.6 Each cut in `excluded.yaml` is a real incompatibility, not flakiness
-- [x] 3.7 `verification.md` has the Printable column and the F-02 VM re-run note
-- [x] 3.8 Host stays responsive; `docker stats` shows caps holding
-- [x] 3.9 Playable set still makes a sensible 5-minute game
+- [x] 3.6 Each cut in `excluded.yaml` is a real incompatibility, not flakiness — d76d456
+- [x] 3.7 `verification.md` has the Printable column and the F-02 VM re-run note — d76d456
+- [x] 3.8 Host stays responsive; `docker stats` shows caps holding — d76d456
+- [x] 3.9 Playable set still makes a sensible 5-minute game — d76d456
