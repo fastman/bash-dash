@@ -16,14 +16,14 @@ PRD refs: US-01, FR-002, FR-003, FR-004, FR-005, NFR (command isolation, ≤ ~6 
 - `challenges/catalog.py`: `main_set()` returns the playable challenges in upstream order (42 today, because `excluded.yaml` is `{}`). `get(slug)` also returns excluded challenges (carry-over d).
 - Measured in F-01 on the dev host: a typical run takes ~0.14 s sequentially and ~0.3 s p95 at concurrency 8. `find_primes` is the outlier at ~1.5–2 s. Abuse runs (fork bomb, CPU spin, sleep) take ~5.2 s and do not affect other runs.
 - Challenge `description` is plain text with Markdown-style backticks and ``` fences. It contains no HTML (none of the 42 descriptions has `<`). `title` comes from `disp_title`.
-- SQLite is the database, with default options (`config/settings.py:75`). Default options mean concurrent writers can get "database is locked".
+- SQLite is the database, with default options (`config/settings.py:77`). Default options mean concurrent writers can get "database is locked".
 - Tests use Django's runner (`uv run python manage.py test`), with an in-memory docker fake in `challenges/tests/fakes.py`. The Docker integration tests `skipUnless` a daemon and image are present. 45 tests pass today.
 
 ### Carry-overs from F-01's implementation review (F9), which this plan must resolve
 
-- **(a)** `reap_stale()` removes *any* `created`/`exited` labelled container regardless of age (`challenges/sandbox.py:196-213`). If it runs while another worker is between `wait` and `remove`, it deletes that worker's container and turns the run into an `error_internal`.
+- **(a)** `reap_stale()` removes *any* `created`/`exited` labelled container regardless of age (`challenges/sandbox.py:228-245`). If it runs while another worker is between `wait` and `remove`, it deletes that worker's container and turns the run into an `error_internal`.
 - **(b)** The module-cached client uses docker-py's default `max_pool_size=10` (`docker/constants.py:40`). Concurrency above 10 on the shared client churns the pool.
-- **(c)** `client.images.get(SANDBOX_IMAGE)` runs on every command (`sandbox.py:153`), costing one extra API round trip per run.
+- **(c)** `client.images.get(SANDBOX_IMAGE)` runs on every command (`sandbox.py:179`), costing one extra API round trip per run.
 - **(d)** `catalog.get(slug)` resolves excluded challenges. The game must only serve from `main_set()`.
 
 ## Desired End State
@@ -43,9 +43,9 @@ PRD refs: US-01, FR-002, FR-003, FR-004, FR-005, NFR (command isolation, ≤ ~6 
 
 ### Key Discoveries:
 
-- `challenges/sandbox.py:136-193`: `run_command` never raises after the container starts. The only exceptions the game must handle are `ValueError` (length) and `SandboxUnavailable`.
-- `challenges/sandbox.py:196-213`: `reap_stale` treats `created`/`exited`/`dead` as stale at any age. That is the race behind carry-over (a).
-- `challenges/sandbox.py:73-81`: `_get_client()` is a lock-guarded lazy singleton (`docker.from_env()`). `from_env` accepts `max_pool_size` (docker-py `client.py:98`).
+- `challenges/sandbox.py:155-218`: `run_command` never raises after the container starts. The only exceptions the game must handle are `ValueError` (length) and `SandboxUnavailable`.
+- `challenges/sandbox.py:228-245`: `reap_stale` treats `created`/`exited`/`dead` as stale at any age. That is the race behind carry-over (a).
+- `challenges/sandbox.py:76-85`: `_get_client()` is a lock-guarded lazy singleton (`docker.from_env()`). `from_env` accepts `max_pool_size` (docker-py `client.py:98`).
 - `challenges/management/commands/verify_challenges.py:207`: the harness calls `reap_stale()` when nothing is in flight. It must keep being able to reap everything (minimum age 0).
 - `challenges/tests/test_sandbox.py:149` (`test_missing_image_raises_sandbox_unavailable`) and `:203` (`test_client_is_created_lazily_and_cached`) depend on the image check and client construction. The implementer must update them together with (b)/(c).
 - Django 6.1's SQLite backend takes `OPTIONS = {"transaction_mode": "IMMEDIATE", "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL", "timeout": 20}` (`django/db/backends/sqlite3/base.py:181-214`).
@@ -71,7 +71,7 @@ Build bottom-up in four phases, each independently testable:
 3. **Player UI**: server-rendered Django templates, plus one small vanilla-JS file that posts commands to a JSON endpoint. The page renders fully from the DB on load, so a reload is always correct.
 4. **Measure**: a `bench_game` management command drives the real service with N concurrent simulated players against the real sandbox. The results go into `verification.md`, and the manual mobile check happens here.
 
-Decisions taken in this planning session (unattended run: planner defaults, each the recommended option, all open to the user overturning them; see `plan-brief.md`):
+Decisions taken in this planning session (unattended run: planner defaults, each the recommended option, all open to the user overturning them; see `plan-brief.md`). The user has since **confirmed** two of them: the English UI, and "What counts as an attempt" (our-side failures are not counted; timeouts and wrong answers are).
 
 | Area | Decision |
 | --- | --- |
@@ -133,6 +133,7 @@ Make `challenges.sandbox` and `challenges.catalog` safe and efficient for many c
 **Contract**:
 - `settings.SANDBOX_MAX_CONCURRENT = int(os.environ.get('BASHDASH_SANDBOX_CONCURRENCY', 8))`.
 - `settings.SANDBOX_QUEUE_TIMEOUT_S = 10`.
+- `settings.ALLOWED_HOSTS = [h for h in os.environ.get('BASHDASH_ALLOWED_HOSTS', '').split(',') if h]`. The empty default keeps today's behaviour (`[]`: with `DEBUG=True`, Django still allows localhost). Phase 4's LAN phone check sets it to the dev host's LAN IP. F-02 sets the real hostname.
 - `_get_client()` calls `docker.from_env(max_pool_size=settings.SANDBOX_MAX_CONCURRENT + 2)`. The +2 leaves headroom for `reap_stale` and `bench_game`'s own calls.
 - Update `test_client_is_created_lazily_and_cached` to assert the kwarg.
 
@@ -242,6 +243,7 @@ New `game` app holding the game state and every gameplay rule, independent of HT
 - `current_challenge(game) -> Challenge | None`:
   - Returns `catalog.playable(game.current_slug)`.
   - If the slug was cut mid-game, it resolves to `catalog.next_playable(game.current_slug)` and persists that.
+  - If no playable challenge follows (the cut slug was the last one), it persists `current_slug=None` **and** `finished_at=now` in the same `filter(pk=…, current_slug=<old>).update(…)`, without incrementing `solved`. This keeps `is_finished` and `current_slug is None` in agreement, so views never see an "active" game with no challenge.
   - `None` means finished.
 - `submit_command(game_id, command: str) -> SubmitOutcome`, with `SubmitOutcome(status, result: SandboxResult | None, game: GameSession)`. `status` values:
   - `'ran'`: counted.
@@ -252,11 +254,12 @@ New `game` app holding the game state and every gameplay rule, independent of HT
   - `'busy'`: the semaphore could not be acquired within `SANDBOX_QUEUE_TIMEOUT_S`, not counted.
   - `'internal'`: `result.error_internal` set, not counted, logged with slug + command.
 - Order inside `submit_command`:
-  1. Load the game and its challenge.
+  1. Load the game and its challenge. Then run the cheap rejections before touching Docker or the semaphore, in this order: `finished` (game over or no current challenge), `empty` (`not command.strip()`), `too_long` (`len(command) > sandbox.MAX_COMMAND_CHARS`). The `ValueError` from `run_command` stays as a backstop only.
   2. `sandbox.reap_stale_once()`.
-  3. Acquire the module-level `BoundedSemaphore(settings.SANDBOX_MAX_CONCURRENT)` with a timeout.
-  4. `sandbox.run_command(challenge, command)`.
-  5. Release.
+  3. Acquire the semaphore with `timeout=settings.SANDBOX_QUEUE_TIMEOUT_S`. On failure, return `busy`.
+  4. `sandbox.run_command(challenge, command)` inside `try: … finally: semaphore.release()`, so a `SandboxUnavailable` (or any unexpected exception) never leaks a slot. `SandboxUnavailable` maps to `unavailable`.
+  5. (Released in the `finally` above.)
+  - The semaphore is created lazily by `_get_semaphore()`, a lock-guarded module singleton sized from `settings.SANDBOX_MAX_CONCURRENT` on first use. `_reset_semaphore()` is exposed for tests, so a test can `override_settings(SANDBOX_MAX_CONCURRENT=1, SANDBOX_QUEUE_TIMEOUT_S=0.01)`, reset the semaphore, hold the one slot, and assert `busy`.
   6. In one short `transaction.atomic()`:
      - Insert the `Attempt`.
      - `GameSession.objects.filter(pk=…, finished_at__isnull=True).update(attempts=F('attempts')+1)`.
@@ -283,7 +286,8 @@ New `game` app holding the game state and every gameplay rule, independent of HT
   - a timed-out run is counted
   - busy: semaphore exhausted with a tiny timeout → `busy`, not counted
   - a duplicate correct submit for the same slug advances exactly once
-  - a slug cut mid-game resolves to the next playable one
+  - a slug cut mid-game resolves to the next playable one; a cut last slug finishes the game (`finished_at` set, `solved` unchanged)
+  - the semaphore slot is released when `run_command` raises `SandboxUnavailable`
 - Full suite still passes: `uv run python manage.py test`
 
 #### Manual Verification:
@@ -356,7 +360,7 @@ Mobile-first pages for rules + nick, play and finished, backed by the Phase 2 se
   - Update the counters. If the challenge changed, swap in the new header/description (`description_html` is server-escaped) and clear the input.
   - If `finished`, navigate to `/done`.
   - Re-enable and refocus the input.
-  - On network error or 503, show the message and keep the command in the input for a retry.
+  - On network error, abort, 503 or 500 (`internal`), show the message and keep the command in the input for a retry. None of these counted as an attempt.
 - `game_text.render_description` filter:
   - HTML-escape first.
   - Then convert ``` fenced blocks to `<pre>` and `` `x` `` to `<code>x</code>`, and turn remaining newlines into `<br>`.
@@ -438,9 +442,11 @@ Answer the roadmap unknown ("~1 s at ~15 concurrent players?") with numbers from
 
 **Contract**:
 - Host details.
-- `bench_game` results for `--players 15` (typical and with-abuse) and `--players 30`, each run once unpinned and once with `BASHDASH_SANDBOX_CONCURRENCY` left at 8.
+- `bench_game` results for `--players 15` (typical and with-abuse) and `--players 30` (typical), all at the default cap of 8.
+  - These runs are necessarily unpinned. `bench_game` drives `game.services`, which never passes `host_overrides`, so `--host-cpus` pinning does not apply.
+  - The event-VM re-run in F-02 provides the real-CPU numbers.
 - A verdict on the "~1 s" unknown.
-- The F-02 contract: processes × cap, thread count, WAL-safe backup.
+- The F-02 contract: processes × cap, thread count, WAL-safe backup. It also records that `verify_challenges` reaps with `min_age_s=0`, so it must not run on the event host while games are live, because it would delete in-flight game containers.
 - A note to re-run on the event VM.
 
 ### Success Criteria:
@@ -455,7 +461,7 @@ Answer the roadmap unknown ("~1 s at ~15 concurrent players?") with numbers from
 #### Manual Verification:
 
 - `verification.md` records p50/p95 for 15 players. Typical p95 ≤ ~1 s, or the gap is explained and accepted against the PRD's "~1 s accepted" NFR
-- Play on a real phone (Android Chrome and/or iOS Safari) over LAN (`runserver 0.0.0.0:8000`, `ALLOWED_HOSTS` via env for dev only). The keyboard does not autocapitalize or autocorrect, "send" submits, and the output is readable. Testing over mobile data is F-02's job
+- Play on a real phone (Android Chrome and/or iOS Safari) over LAN (`BASHDASH_ALLOWED_HOSTS=<lan-ip> uv run python manage.py runserver 0.0.0.0:8000`). The keyboard does not autocapitalize or autocorrect, "send" submits, and the output is readable. Testing over mobile data is F-02's job
 - The F-02 concurrency contract is written down in `verification.md`
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
@@ -500,7 +506,7 @@ Answer the roadmap unknown ("~1 s at ~15 concurrent players?") with numbers from
 
 - Roadmap entry and carry-overs: `context/foundation/roadmap.md` (S-01)
 - F-01 plan, review and verification: `context/archive/2026-09-29-sandbox-image-and-task-cut/` (`plan.md`, `reviews/impl-review.md` F9, `verification.md`)
-- Runner: `challenges/sandbox.py:136-213`; catalog: `challenges/catalog.py:74-88`; test fakes: `challenges/tests/fakes.py`
+- Runner: `challenges/sandbox.py:155-245`; catalog: `challenges/catalog.py:68-88`; test fakes: `challenges/tests/fakes.py`
 - PRD: `context/foundation/prd.md` (US-01, FR-002–FR-005, NFRs, Business Logic, Non-Goals)
 
 ## Progress

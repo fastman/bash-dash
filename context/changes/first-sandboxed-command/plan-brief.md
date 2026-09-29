@@ -21,7 +21,7 @@ On a phone-width browser, `/` shows the rules and a nick form. `/play` shows cha
 
 ## Key Decisions Made
 
-This planning session ran unattended, so each row below is the planner's recommended default, grounded in the codebase. The user has not confirmed them and can overturn any of them.
+This planning session ran unattended, so each row below is the planner's recommended default, grounded in the codebase. The user has since confirmed **What counts** and **UI language**. The other rows are still unconfirmed defaults the user can overturn.
 
 | Decision | Choice | Why (1 sentence) | Source |
 | --- | --- | --- | --- |
@@ -29,14 +29,14 @@ This planning session ran unattended, so each row below is the planner's recomme
 | Player identity | `game_id` in the Django session cookie | No accounts (PRD); gives reload-safety for free, and S-02 builds on it | Plan |
 | Progress pointer | `current_slug`, resolved only through `main_set()` lookups | Fixes carry-over (d); a mid-event cut can't shift players onto the wrong challenge | Roadmap carry-over |
 | Attempt record | `Attempt` row per run + counters on `GameSession` | Restores last output on reload; gives S-03 the ranking inputs (`last_solved_at`) | Plan |
-| What counts | Every run with a verdict (incl. timeouts); not counted: too long, empty, sandbox down, busy, `error_internal` | Players aren't charged for our failures; `ls`/`cat` still count (PRD) | PRD + Plan |
+| What counts | Every run with a verdict (incl. timeouts); not counted: too long, empty, sandbox down, busy, `error_internal` | Players aren't charged for our failures; `ls`/`cat` still count (PRD) | PRD + user-confirmed |
 | Double submit | Conditional `UPDATE … WHERE current_slug=…` + `F()` counters | A correct answer advances exactly once without row locks (SQLite) | Plan |
 | Concurrency | Per-process semaphore, default 8, 10 s queue then "busy"; docker pool = cap + 2 | Fixes carry-over (b); 8 is inside F-01's measured envelope (~0.3 s p95) | Roadmap carry-over + F-01 data |
 | Reaping | `reap_stale(min_age_s=30)`, lazily once per process, never in `AppConfig.ready()` | Fixes carry-over (a) and is safe from any worker; `ready()` would hit Docker on `migrate`/`test` | Roadmap carry-over |
 | Image check | Cache positive `images.get` per client; invalidate on `ImageNotFound` | Fixes carry-over (c): one fewer Docker round trip per command | Roadmap carry-over |
 | SQLite | WAL + `transaction_mode=IMMEDIATE` + 20 s timeout; no transaction held across a sandbox run | Avoids "database is locked" under concurrent game writes | Plan |
 | UI transport | Server-rendered templates + one vanilla-JS `fetch` to a JSON endpoint | No page reload per command on mobile (keyboard stays up); no build step | Plan |
-| UI language | English | The challenge texts are English; avoids a mixed-language UI | Plan (assumption) |
+| UI language | English | The challenge texts are English; avoids a mixed-language UI | User-confirmed |
 
 ## Scope
 
@@ -83,11 +83,12 @@ The page renders fully from DB state on load. `play.js` only posts the command a
 
 ## Open Risks & Assumptions
 
-- **UI language assumed English.** The PRD quotes Polish messages (e.g. "zeskanuj kod przy stoisku"). Switching means editing template strings only.
+- **UI language is English (user-confirmed),** although the PRD quotes Polish messages (e.g. "zeskanuj kod przy stoisku").
 - **The dev-host numbers don't transfer to the event VM.** `bench_game` must be re-run there in F-02, like `verify_challenges`.
 - **F-02 must respect the concurrency contract:** total sandbox concurrency = processes × cap, with enough threads per process, and a WAL-safe (`.backup`) DB backup.
 - **8 simultaneous abusive commands** (~5 s each) can make other players wait up to the 10 s queue timeout, after which they get "busy". The PRD accepts degraded performance under crowding.
-- **These decisions are planner defaults** from an unattended run and still need the user's review.
+- **The remaining decisions are planner defaults** from an unattended run and still need the user's review. The exceptions are UI language and What counts, which are confirmed.
+- **`verify_challenges` must not run on the event host while games are live.** It reaps with `min_age_s=0`. This is recorded in the F-02 contract in `verification.md`.
 
 ## Success Criteria (Summary)
 
