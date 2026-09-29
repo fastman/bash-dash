@@ -49,7 +49,7 @@ Deep verification confirmed the following:
   - Tradeoff: Staff use the admin changelist on a phone (search → tick → action → Go). There is no confirmation card with the place before marking, and the wrong row can be ticked. The admin also stops being fully read-only, which contradicts the plan's "What We're NOT Doing".
   - Confidence: MED — the admin action mechanics are standard, but how usable the admin is on a 320 px phone has not been checked.
   - Blind spot: S-05's nick hiding would then also need admin write access, which widens the non-read-only surface.
-- **Decision**: PENDING
+- **Decision**: Keep custom page; tech-stack.md updated
 
 ### F2 — Booth staff share a superuser account
 
@@ -63,7 +63,7 @@ Deep verification confirmed the following:
   - Tradeoff: The operator has two accounts to manage.
   - Confidence: HIGH — the `staff_member_required` check was verified in Django 6.1.1.
   - Blind spot: If F1 goes with Fix B (admin-only), the booth account instead needs the `game.change_gamesession` permission.
-- **Decision**: PENDING
+- **Decision**: Keep shared superuser account (user chose to accept the risk)
 
 ### F3 — Staff login over the public HTTPS domain is not covered by settings
 
@@ -73,7 +73,7 @@ Deep verification confirmed the following:
 - **Location**: Migration Notes; Manual Verification 2.4
 - **Detail**: This is the first slice where someone logs in over a POST from a phone on the event domain. `config/settings.py` sets neither `CSRF_TRUSTED_ORIGINS` nor `SECURE_PROXY_SSL_HEADER`, and it has `DEBUG = True` and the insecure `SECRET_KEY` hard-coded (`:24,27`). Behind an HTTPS reverse proxy, Django's CSRF origin check can reject the admin login POST (403), so the booth cannot log in on the day. Local manual testing on `runserver` will not catch this. Most of this belongs to F-02 (event infrastructure), but S-04 is the slice that depends on it.
 - **Fix**: Add a line to Migration Notes: "Requires F-02 to set `CSRF_TRUSTED_ORIGINS` / `SECURE_PROXY_SSL_HEADER` (and DEBUG off, secure cookies) for the public domain; verify the staff login on the deployed URL." Also add a matching unknown to the F-02 roadmap entry if it is not already there.
-- **Decision**: PENDING
+- **Decision**: Applied: F-02 settings note added to Migration section
 
 ### F4 — `mmss` filter partly duplicates `clock`; the choice is left open
 
@@ -83,7 +83,7 @@ Deep verification confirmed the following:
 - **Location**: Phase 2 §3 Template (last bullet); Phase 1 §3 `solve_time`
 - **Detail**: The plan says "add `mmss` to `game_text.py` or pre-format in the view; pick the one with less code". `game_text.clock(remaining_ms)` (`game/templatetags/game_text.py:24-28`) already formats `m:ss`, but it rounds up, which suits a countdown and not an elapsed time. An implementer reusing `clock` would show solve times one second too long, and they would no longer match the ranking tie-break (`elapsed` in `ranked_games`).
 - **Fix**: Specify it: add an `mmss(timedelta | None)` filter to `game_text.py` that floors seconds and renders "—" for `None`, with a one-line note not to reuse `clock` (it ceil-rounds).
-- **Decision**: PENDING
+- **Decision**: Applied: new round-down mmss filter specified
 
 ### F5 — Mixed trailing-slash style in the new routes
 
@@ -93,4 +93,4 @@ Deep verification confirmed the following:
 - **Location**: Phase 2 §2 Routes
 - **Detail**: The plan adds `path('staff/', ...)` and `path('staff/prize', ...)`. Every existing route in `game/urls.py` has no trailing slash (`start`, `play/command`, `done`). With `APPEND_SLASH`, a typed `/staff` redirects to `/staff/` without trouble, but the plan mixes the two styles within one feature. S-05 will copy this.
 - **Fix**: Pick one style and state it. For example, `path('staff', ...)` plus `path('staff/prize', ...)` to match the existing routes, with the tests and manual steps updated to `/staff`. Or keep `staff/` and add a note that it is intentional.
-- **Decision**: PENDING
+- **Decision**: Applied: routes are `staff` and `staff/prize` (no trailing slash on the index)

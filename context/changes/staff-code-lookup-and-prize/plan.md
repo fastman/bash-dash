@@ -17,8 +17,8 @@ Booth staff log in with a password, type a player's 6-digit code, and see that g
 ## Desired End State
 
 - `GameSession.prize_given_at` (nullable datetime) records when the prize was handed out.
-- `/staff/` (staff login required) shows a code input with a numeric keyboard on phones. Submitting a code shows one of these:
-  - **Found, finished**: nick (large, with "Ask the player for their nick"), Solved `X / total`, Attempts, Place `#R of M`, Solve time `m:ss` (or "—" when 0 solved), "Finished N minutes ago", and the prize status: a "Mark prize given" button, or a warning "Prize already given N minutes ago (HH:MM)".
+- `/staff` (staff login required) shows a code input with a numeric keyboard on phones. Submitting a code shows one of these:
+  - **Found, finished**: nick (large, with "Ask the player for their nick"), Solved `X / total`, Attempts, Place `#R of M`, Solve time `m:ss` (rounded down) (or "—" when 0 solved), "Finished N minutes ago", and the prize status: a "Mark prize given" button, or a warning "Prize already given N minutes ago (HH:MM)".
   - **Found, still playing**: the same identity data, "Game in progress", and no prize button.
   - **Found, not ranked** (`rank_of` → `None` for a finished game, which happens after S-05 hides a nick): place shows "not ranked". The prize button stays available. Disqualification only hides the nick, and prize policy stays with the staff.
   - **Not found / malformed**: "No game with code 123456" / "Enter a 6-digit code", with the input kept.
@@ -26,12 +26,12 @@ Booth staff log in with a password, type a player's 6-digit code, and see that g
 - Anonymous users and logged-in non-staff users are redirected to the admin login and never see game data.
 - The admin shows `prize_given_at` as a column and as a "given / not given" filter. The admin stays read-only.
 
-Verify: `uv run python manage.py test game challenges` is green. Then, locally, create a staff user, finish a short game, look up its code on `/staff/`, mark the prize, and try again (see Manual Testing Steps).
+Verify: `uv run python manage.py test game challenges` is green. Then, locally, create a staff user, finish a short game, look up its code on `/staff`, mark the prize, and try again (see Manual Testing Steps).
 
 ### Key Discoveries:
 
 - `rank_of` already covers "place" and handles unfinished games. The lookup view must treat `None` as "not ranked", not unpack it blindly (the S-03 `done` view does unpack it; that is the S-05 carry-over).
-- `django.contrib.admin.views.decorators.staff_member_required` gives password login for free. It redirects to `admin:login?next=/staff/...`, so the staff page needs no login template of its own.
+- `django.contrib.admin.views.decorators.staff_member_required` gives password login for free. It redirects to `admin:login?next=/staff...`, so the staff page needs no login template of its own.
 - `solved > 0` ⇔ `last_solved_at IS NOT NULL` (S-03 plan). The solve time is `last_solved_at - started_at`, and it is `None` when nothing was solved.
 - `TIME_ZONE = 'UTC'` (`config/settings.py:118`). Absolute clock times would read wrong at a Polish booth, so relative times (`timesince`) are the main display. `HH:MM` appears only in the "already given" warning, rendered with Django's `localtime` (UTC unless the operator changes `TIME_ZONE`).
 
@@ -104,7 +104,7 @@ Every game can record when its prize was given. Services can find a game by code
 
 **Intent**: Let an operator see prize status in the admin as a backup to the staff page.
 
-**Contract**: Add `prize_given_at` to `list_display`, and a `list_filter` for given / not given (`('prize_given_at', admin.EmptyFieldListFilter)`). Update the module docstring to point to `/staff/`. The admin stays read-only.
+**Contract**: Add `prize_given_at` to `list_display`, and a `list_filter` for given / not given (`('prize_given_at', admin.EmptyFieldListFilter)`). Update the module docstring to point to `/staff`. The admin stays read-only.
 
 #### 5. Tests
 
@@ -139,7 +139,7 @@ Every game can record when its prize was given. Services can find a game by code
 
 ### Overview
 
-A phone-friendly `/staff/` page where logged-in staff look up a code, see the result, and mark the prize given.
+A phone-friendly `/staff` page where logged-in staff look up a code, see the result, and mark the prize given.
 
 ### Changes Required:
 
@@ -151,7 +151,7 @@ A phone-friendly `/staff/` page where logged-in staff look up a code, see the re
 
 **Contract**:
 - Both views are decorated with `staff_member_required` (from `django.contrib.admin.views.decorators`).
-- `lookup(request)`, `GET /staff/?code=…`:
+- `lookup(request)`, `GET /staff?code=…`:
   - no `code` → an empty form;
   - `normalize_code` fails → "Enter a 6-digit code.";
   - otherwise `find_by_code`. Not found → "No game with code NNNNNN." Found → the context holds `game`, `total` (= `len(catalog.main_set())`), `rank` (the `rank_of` result, which may be `None`), and `solve_time`.
@@ -167,7 +167,7 @@ A phone-friendly `/staff/` page where logged-in staff look up a code, see the re
 
 **Intent**: Put the staff pages under one prefix. S-05 adds its screen there.
 
-**Contract**: `path('staff/', staff_views.lookup, name='staff_lookup')` and `path('staff/prize', staff_views.give_prize, name='staff_prize')`, in the existing `game` namespace.
+**Contract**: `path('staff', staff_views.lookup, name='staff_lookup')` and `path('staff/prize', staff_views.give_prize, name='staff_prize')`, in the existing `game` namespace.
 
 #### 3. Template
 
@@ -181,11 +181,11 @@ A phone-friendly `/staff/` page where logged-in staff look up a code, see the re
 - A GET form with a single input: `name="code"`, `inputmode="numeric"`, `autocomplete="off"`, `maxlength="7"`, autofocus, and the current code kept in it.
 - Result card when a game is found, in this order:
   - the nick (large) and "Ask the player for their nick";
-  - Solved `X / total`, Attempts, Place `#R of M` (or "not ranked"), Solve time `m:ss` (or "—");
+  - Solved `X / total`, Attempts, Place `#R of M` (or "not ranked"), Solve time `m:ss` (rounded down) (or "—");
   - "Finished {{ finished_at|timesince }} ago" or "Game in progress";
   - prize status: already given → a warning box with `timesince` and `HH:MM`; finished and not given → a POST form with a hidden `code`, `{% csrf_token %}`, and a big "Mark prize given" button; unfinished → no button.
 - A small "Log out" link (a POST form to `admin:logout`, since Django 5+ requires POST for logout).
-- Format the solve time with a small template filter (`game_text.py` already holds filters; add `mmss`) or pre-format it in the view. Either is fine; pick the one with less code.
+- Format the solve time with a new `mmss` filter in `game_text.py` that rounds DOWN to whole seconds. Do not reuse `clock`, which rounds up and would show solve times one second too long.
 
 #### 4. Styles
 
@@ -202,7 +202,7 @@ A phone-friendly `/staff/` page where logged-in staff look up a code, see the re
 **Intent**: Pin down the access control, the lookup states, and the once-only prize flow over HTTP.
 
 **Contract** (log in with `force_login` as a user with `is_staff=True`; create games with `services.start_game` and then `update(...)` to finish them, as `SummaryTests` does; use a fixed code such as `'987654'`):
-- Anonymous GET `/staff/` and POST `/staff/prize` → redirect to the admin login. A logged-in non-staff user → the same. No game data in the response.
+- Anonymous GET `/staff` and POST `/staff/prize` → redirect to the admin login. A logged-in non-staff user → the same. No game data in the response.
 - GET with no code → the form, and no card.
 - A malformed code → "Enter a 6-digit code". An unknown code → "No game with code".
 - A code with spaces (`987 654`) finds the game.
@@ -224,7 +224,7 @@ A phone-friendly `/staff/` page where logged-in staff look up a code, see the re
 
 #### Manual Verification:
 
-- Logged out, `/staff/` goes to the admin login, and after login it returns to `/staff/`.
+- Logged out, `/staff` goes to the admin login, and after login it returns to `/staff`.
 - At 360 px and 320 px width (Chrome devtools), the lookup form and the result card fit without horizontal scroll, and the code input opens a numeric keyboard on a real phone.
 - End to end: play a short game, look up its code, see the same solved, attempts and place as the player's `/done`, mark the prize, and see the "already given" warning on a second lookup and a second press.
 - Looking up the code of a game still in progress shows "Game in progress" and no prize button.
@@ -249,7 +249,7 @@ A phone-friendly `/staff/` page where logged-in staff look up a code, see the re
 
 1. `uv run python manage.py migrate`, then `uv run python manage.py createsuperuser` (or set `is_staff` on an existing user).
 2. `BASHDASH_GAME_DURATION_S=30 uv run python manage.py runserver`. Play a game at phone width and note the code on `/done`.
-3. In another browser, open `/staff/`, log in, and enter the code (try it with a space in the middle). Compare the numbers with `/done`.
+3. In another browser, open `/staff`, log in, and enter the code (try it with a space in the middle). Compare the numbers with `/done`.
 4. Press "Mark prize given". Check the success message. Press it again (or reload and look it up again) and check the warning.
 5. Start a new game, and look up its code before it ends. It should show "Game in progress" and no button.
 6. Check the admin list for the `prize given at` column and filter.
@@ -260,7 +260,7 @@ A lookup runs one indexed `SELECT` by code, the bulk `expire_overdue` `UPDATE`, 
 
 ## Migration Notes
 
-`0004_gamesession_prize_given_at` adds a nullable column, so it is safe on any existing DB. Reversing it drops the column. Operational step before the event: create at least one staff account (`createsuperuser`) on the event VM, and share the password with the booth staff.
+`0004_gamesession_prize_given_at` adds a nullable column, so it is safe on any existing DB. Reversing it drops the column. Operational step before the event: create at least one staff account (`createsuperuser`) on the event VM, and share the password with the booth staff. The login POST goes over the public HTTPS domain: F-02 must set `CSRF_TRUSTED_ORIGINS`, proxy SSL headers and `DEBUG=False` in settings, and login on `/staff` must be tested on the deployed URL. Booth staff use the shared `createsuperuser` account (accepted risk; the admin game models are read-only).
 
 ## References
 
@@ -297,7 +297,7 @@ A lookup runs one indexed `SELECT` by code, the bulk `expire_overdue` `UPDATE`, 
 
 #### Manual
 
-- [ ] 2.4 Logged-out `/staff/` goes to admin login and returns after login
+- [ ] 2.4 Logged-out `/staff` goes to admin login and returns after login
 - [ ] 2.5 Lookup form and card fit 360 px and 320 px; numeric keyboard on a real phone
 - [ ] 2.6 End to end: lookup matches `/done`, prize marked, second press shows "already given"
 - [ ] 2.7 In-progress game shows "Game in progress" and no prize button
