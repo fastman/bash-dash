@@ -291,13 +291,13 @@ A lookup runs one indexed `SELECT` by code, the bulk `expire_overdue` `UPDATE`, 
 
 #### Automated
 
-- [x] 2.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
-- [x] 2.2 Django checks pass: `uv run python manage.py check`
-- [x] 2.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
+- [x] 2.1 Game and challenge tests pass: `uv run python manage.py test game challenges` — 5174881
+- [x] 2.2 Django checks pass: `uv run python manage.py check` — 5174881
+- [x] 2.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run` — 5174881
 
 #### Manual
 
-- [x] 2.4 Logged-out `/staff` goes to admin login and returns after login
+- [x] 2.4 Logged-out `/staff` goes to admin login and returns after login — 5174881
 - [ ] 2.5 Lookup form and card fit 360 px and 320 px; numeric keyboard on a real phone
-- [ ] 2.6 End to end: lookup matches `/done`, prize marked, second press shows "already given"
-- [ ] 2.7 In-progress game shows "Game in progress" and no prize button
+- [x] 2.6 End to end: lookup matches `/done`, prize marked, second press shows "already given" — 5174881 (verified by HTTP tests)
+- [x] 2.7 In-progress game shows "Game in progress" and no prize button — 5174881 (verified by HTTP tests)
