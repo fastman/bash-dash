@@ -1,0 +1,312 @@
+---
+project: "bash-dash"
+context_type: greenfield
+created: 2026-09-29
+updated: 2026-09-29
+checkpoint:
+  current_phase: 8
+  phases_completed: [1, 2, 3, 4, 5, 6, 7]
+  gray_areas_resolved:
+    - topic: "primary persona"
+      decision: "uczestnik hackathonu; obsługa stoiska jako secondary"
+    - topic: "insight"
+      decision: "gra pokazuje umiejętności; dociekliwość to sygnał; ranking tworzy ruch"
+    - topic: "hall of fame access"
+      decision: "ZMIENIONE w fazie 4: tylko dla obsługi, wyświetlany na ekranie przy stoisku razem z QR; brak publicznego rankingu"
+    - topic: "event token"
+      decision: "rotujący token w QR na ekranie rankingu; pozwala rozpocząć grę przez ok. 15 min; rozpoczęta sesja trwa pełne 5 min"
+    - topic: "email"
+      decision: "nie zbieramy; tylko nick"
+    - topic: "nick uniqueness"
+      decision: "nieunikalny; identyfikacja po kodzie 6-cyfrowym"
+    - topic: "one attempt per person"
+      decision: "miękka blokada w przeglądarce, nice-to-have"
+    - topic: "timeline"
+      decision: "wydarzenie 2026-10-03 (4 dni); tniemy zakres; mvp_weeks: 1"
+  frs_drafted: 14
+  quality_check_status: accepted
+---
+
+# bash-dash — shape notes
+
+Źródło wejściowe: `context/foundation/idea.md`.
+
+## Vision & Problem Statement
+
+Firma bierze udział w hackathonie jako partner i ma własne, raczej niszowe stoisko. Celem jest
+zainteresowanie uczestników firmą i zachęcenie ich do aplikowania (rekrutacja). Spodziewany ruch
+jest umiarkowany: dziesiątki, najwyżej kilkaset osób w ciągu wydarzenia. To pierwsze takie
+wydarzenie, więc nie ma danych o status quo ani o jego koszcie (patrz Open Questions).
+
+Insight:
+- Wynik z rozwiązywania zadań w shellu pod presją czasu (5 minut) pokazuje realne umiejętności
+  lepiej niż rozmowa przy stoisku.
+- Dociekliwość też jest sygnałem. Kto znajdzie odpowiedzi w kodzie strony, wyciągnie je z binarki
+  albo sprawnie użyje AI, pokazuje cechy, których szukamy. „Oszukiwanie” jest więc świadomie
+  dozwolone.
+- Publiczny ranking (Hall of fame) na ekranie przy stoisku buduje rywalizację i przyciąga ruch.
+
+## User & Persona
+
+**Persona główna: uczestnik hackathonu.** Developer lub student zajęty głównym zadaniem wydarzenia.
+Przechodzi obok stoiska, skanuje kod QR i przez 5 minut rozwiązuje zadania z bash jako side-quest.
+Na koniec dostaje wynik, miejsce w rankingu i 6-cyfrowy kod, z którym odbiera nagrodę na stoisku.
+
+### Secondary persona
+**Obsługa stoiska.** Weryfikuje wynik po 6-cyfrowym kodzie, wydaje nagrody, moderuje nicki
+w Hall of fame. Firma (rekrutacja) jest beneficjentem, a nie bezpośrednim użytkownikiem.
+
+## Access Control
+
+Trzy role, bez kont użytkowników:
+
+| Rola | Jak wchodzi | Co może |
+|---|---|---|
+| **Gracz** (uczestnik) | Skanuje kod QR wyświetlany na ekranie przy stoisku. Adres zawiera krótko ważny token (ok. 15 min). Podaje nick (wymagany, nieunikalny). E-maila nie zbieramy. | Rozpocząć sesję gry, wysyłać komendy, zobaczyć podsumowanie i swój 6-cyfrowy kod. |
+| **Obsługa stoiska** | Logowanie hasłem. | Oglądać Hall of fame razem z aktualnym kodem QR (widok na ekran przy stoisku), ustawiać czas ważności tokenu, wyszukiwać po kodzie, ukrywać nicki (dyskwalifikacja), oznaczać wydanie nagrody. |
+
+- Nie ma publicznego rankingu. Hall of fame razem z QR widzi tylko zalogowana obsługa, która
+  wyświetla go na ekranie przy stoisku.
+- Token w kodzie QR pozwala **rozpocząć** grę tylko przez ok. 15 minut od wygenerowania. Grę mogą
+  więc zacząć osoby fizycznie przy stoisku, a nie z domu. Sesja rozpoczęta w oknie ważności trwa
+  pełne 5 minut, nawet jeśli token w tym czasie wygaśnie.
+- Wejście z wygasłym tokenem albo bez tokenu kończy się odmową z informacją „zeskanuj kod przy
+  stoisku”, a nie ekranem startowym.
+- Identyfikacja gracza przy odbiorze nagrody odbywa się wyłącznie po 6-cyfrowym kodzie.
+  Nick nie jest identyfikatorem.
+- Jedno podejście na osobę: miękka blokada w przeglądarce (nice-to-have). Obejście przez tryb
+  incognito jest akceptowane.
+- Dane osobowe: zbieramy tylko nick, więc nie potrzeba procedur RODO.
+
+## MVP flow
+
+1. Uczestnik skanuje QR przy stoisku (adres z tokenem wydarzenia).
+2. Ekran startowy: zasady (5 min, zadania po kolei, każda komenda to podejście), nick, „Start”.
+3. Serwer zakłada sesję i zapisuje czas startu.
+4. Opis zadania i terminal. Gracz wpisuje komendę, widzi wyjście oraz informację „poprawne/niepoprawne”.
+5. Po poprawnej odpowiedzi przechodzi do następnego zadania. Pętla trwa do końca 5 minut lub do rozwiązania wszystkich zadań.
+6. Podsumowanie: liczba rozwiązanych zadań, liczba podejść, miejsce w rankingu, 6-cyfrowy kod, CTA.
+7. Gracz podchodzi do stoiska. Obsługa wyszukuje kod w panelu i wydaje nagrodę.
+   Równolegle na ekranie przy stoisku działa Hall of fame.
+
+## Success Criteria
+
+### Primary
+- Gra działa bez awarii przez całe wydarzenie (2026-10-03). Każdy, kto zeskanował QR, może
+  rozegrać sesję, a każdy wydany 6-cyfrowy kod da się zweryfikować na stoisku.
+
+### Secondary
+- Hall of fame na ekranie przy stoisku przyciąga ruch.
+
+### Guardrails
+- Ranking i kody przetrwają awarię lub przywrócenie maszyny ze snapshotu.
+- Żaden gracz nie może swoją komendą (np. fork bombą czy zajęciem CPU) zablokować gry innym ani
+  zepsuć hosta.
+- Limit 5 minut jest liczony uczciwie po stronie serwera. Odświeżenie strony go nie resetuje,
+  a komendy wysłane po czasie się nie liczą.
+
+## User Stories
+
+### US-01: Uczestnik rozgrywa sesję i odbiera nagrodę
+
+- **Given** uczestnik stoi przy stoisku z telefonem, a na ekranie widać ranking z aktualnym kodem QR
+- **When** skanuje kod, podaje nick, klika „Start” i przez 5 minut rozwiązuje zadania, wpisując komendy
+- **Then** widzi podsumowanie z liczbą rozwiązanych zadań, liczbą podejść, miejscem w rankingu
+  i 6-cyfrowym kodem, a obsługa znajduje ten kod w panelu i widzi ten sam wynik
+
+#### Acceptance Criteria
+- Przed startem gracz widzi zasady: 5 minut, zadania po kolei, każda komenda to podejście, mniej
+  podejść jest lepiej.
+- Każda wysłana komenda zwiększa licznik podejść, także komenda rozpoznawcza (`ls`, `cat`).
+- Gracz nie przejdzie do następnego zadania, dopóki nie rozwiąże bieżącego.
+- Odświeżenie strony w trakcie gry wraca do tej samej sesji z tym samym pozostałym czasem.
+- Komenda wysłana po upływie 5 minut nie jest liczona.
+- Po zakończeniu gry wynik gracza pojawia się w Hall of fame (o ile mieści się w top N i nick nie
+  jest ukryty).
+- Skan kodu QR starszego niż ustawiony czas ważności (domyślnie ok. 15 minut) nie pozwala
+  rozpocząć gry.
+
+## Functional Requirements
+
+Numeracja jest stabilna. FR-009, FR-014 i FR-015 usunięto w rundzie sokratejskiej (patrz niżej).
+
+### Wejście
+- FR-001: Gracz może rozpocząć grę tylko z ważnym tokenem z kodu QR wyświetlanego przy stoisku. Czas ważności tokenu (domyślnie ok. 15 min) ustawia obsługa, a wartość 0 oznacza, że token nie wygasa. Priority: must-have
+  > Socrates: Kontrargument: „ekran przy stoisku to punkt awarii; gdy padnie, nikt nie zacznie
+  > gry”. Rozstrzygnięcie: konfigurowalny czas ważności. Ustawienie 0 wyłącza wygasanie
+  > i działa jako fallback.
+- FR-002: Gracz może przeczytać zasady i podać nick przed startem. Priority: must-have
+  > Socrates: Kontrargument: „obraźliwe nicki trafiają prosto na ekran”. Rozstrzygnięcie:
+  > wystarczy moderacja reaktywna (FR-012), bez filtra ani akceptacji z góry.
+
+### Rozgrywka
+- FR-003: Gracz może rozwiązywać zadania z zestawu głównego w stałej kolejności, bez pomijania. Priority: must-have
+  > Socrates: Rozważono „utknięcie na jednym zadaniu” i „niepewną kolejność trudności”.
+  > Brak kontrargumentu; FR stoi jak jest.
+- FR-004: Gracz może wpisać komendę bash i zobaczyć jej wyjście oraz informację, czy rozwiązała zadanie. Weryfikacja odrzuca samo wypisanie oczekiwanego wyniku. Priority: must-have
+  > Socrates: Kontrargument: „opóźnienie ok. 1 s na komendę przy tłoku zjada 5-minutowy
+  > limit”. Rozstrzygnięcie: ryzyko akceptowane przy spodziewanym ruchu.
+- FR-005: Gracz może wysłać dowolną liczbę komend. Każda liczy się jako podejście. Priority: must-have
+  > Socrates: Kontrargument: „podejścia to tylko tie-breaker; może nie warto tłumaczyć tej
+  > zasady”. Rozstrzygnięcie: zostaje, bo rozstrzyga remisy. Zasada jest jasno opisana na ekranie
+  > startowym.
+- FR-006: Gracz może widzieć pozostały czas i po odświeżeniu strony kontynuować tę samą sesję bez resetu czasu. Priority: must-have
+  > Socrates: Kontrargument: „zamknięcie karty lub zmiana przeglądarki gubi sesję”.
+  > Rozstrzygnięcie: akceptujemy. Wznowienie działa tylko w tej samej przeglądarce.
+- FR-007: Gracz może grać do upływu 5 minut albo do rozwiązania wszystkich zadań. Wtedy gra się kończy. Priority: must-have
+  > Socrates: Rozważono „5 minut to za mało” i „pisanie na telefonie”. Brak kontrargumentu;
+  > FR stoi jak jest.
+
+### Podsumowanie
+- FR-008: Gracz może zobaczyć liczbę rozwiązanych zadań, liczbę podejść, miejsce w rankingu i unikalny 6-cyfrowy kod. Priority: must-have
+  > Socrates: Rozważono „zgubienie kodu” i „zmienność miejsca”. Brak kontrargumentu;
+  > FR stoi jak jest.
+
+### Hall of fame
+- FR-010: Obsługa może wyświetlić automatycznie odświeżany ranking top N (miejsce, nick, liczba zadań, liczba podejść) bez ukrytych nicków, a obok listę ostatnio zakończonych gier. Priority: must-have
+  > Socrates: Kontrargument: „top N zniechęca słabszych graczy, bo nie widzą się na ekranie”.
+  > Rozstrzygnięcie: dodajemy na ekranie „ostatnie wyniki”, żeby każdy przez chwilę widział
+  > swój wynik.
+- FR-017: Obsługa może wyświetlić na ekranie rankingu aktualny, rotujący kod QR z tokenem startowym. Priority: must-have
+  > Socrates: Rozważono „konflikt układu QR z rankingiem” i „skan z daleka”. Brak
+  > kontrargumentu; FR stoi jak jest.
+
+### Obsługa stoiska
+- FR-011: Obsługa może wyszukać wynik po 6-cyfrowym kodzie (nick, liczba zadań, podejścia, miejsce, czas). Priority: must-have
+  > Socrates: Kontrargument: „kolizja albo podejrzenie cudzego kodu”. Rozstrzygnięcie: kod jest
+  > gwarantowanie unikalny, a przy odbiorze nagrody obsługa pyta też o nick.
+- FR-012: Obsługa może ukryć nick z Hall of fame bez kasowania wyniku. Ukrycie działa jak dyskwalifikacja. Priority: must-have
+  > Socrates: Kontrargument: „podmiana nicku jest łagodniejsza niż ukrycie”. Rozstrzygnięcie:
+  > kto trolluje obraźliwym nickiem, ten się dyskwalifikuje. Ukrycie zostaje.
+- FR-013: Obsługa może oznaczyć „nagroda wydana”. Priority: must-have
+  > Socrates: Kontrargument: „bez tego ta sama osoba odbierze nagrodę dwa razy”. Rozstrzygnięcie:
+  > podniesione z nice-to-have do must-have.
+
+### Inne
+- FR-016: Gracz nie może (miękko) rozpocząć drugiej gry z tej samej przeglądarki. Priority: nice-to-have
+  > Socrates: Kontrargument: „powtórki zawyżają ranking, a blokada w przeglądarce ich nie
+  > zatrzyma”. Rozstrzygnięcie: zostaje nice-to-have. Duplikaty w czołówce obsługa ukrywa
+  > (FR-012), a nagroda przysługuje raz na osobę (FR-013).
+
+### Usunięte w rundzie sokratejskiej
+- ~~FR-009: CTA rekrutacyjne~~. Usunięte: ludzie i tak podchodzą do stoiska po nagrody, więc
+  rozmowa rekrutacyjna odbywa się tam.
+- ~~FR-014: korekta lub unieważnienie wyniku~~. Usunięte: dyskwalifikację załatwia FR-012.
+  Wyjątkowe korekty wprowadzamy ręcznie w bazie.
+- ~~FR-015: ukryta nagroda (odpowiedzi celowo w danych strony)~~. Usunięte: nie umieszczamy
+  odpowiedzi celowo. Kto „schakuje” system, zasługuje na 42/42.
+
+## Business Logic
+
+Gracze są szeregowani według liczby rozwiązanych zadań (malejąco), przy remisie według liczby
+wysłanych komend (rosnąco), a dalej według czasu od startu sesji do ostatniego poprawnego
+rozwiązania (rosnąco).
+
+Wejścia: sekwencja komend wysłanych przez gracza w ciągu 5 minut od startu sesji (liczonych przez
+serwer) oraz wynik weryfikacji każdej z nich. Zadanie uznaje się za rozwiązane tylko wtedy, gdy
+komenda daje oczekiwany wynik, także po ponownym wykonaniu na losowo zmienionych danych. Dzięki
+temu samo wypisanie oczekiwanego wyniku nie przechodzi. Komendy wysłane po czasie nie wpływają na
+wynik.
+
+Wyjście: miejsce w rankingu. Gracz widzi je na ekranie podsumowania, a obsługa na ekranie przy
+stoisku. Nicki ukryte przez obsługę (dyskwalifikacja) nie występują w rankingu. Czas ostatniego
+rozwiązania służy wyłącznie do rozstrzygania remisów i **nie jest pokazywany** na ekranie Hall of
+fame, żeby go nie zaciemniać. Nie ma punktów za trudność zadania.
+
+## Non-Functional Requirements
+
+- Awaria maszyny albo przywrócenie jej ze snapshotu traci wyniki i kody z najwyżej ostatnich
+  ok. 5 minut.
+- Komenda jednego gracza (np. fork bomba, pętla, zajęcie CPU lub pamięci) nie wpływa na
+  możliwość gry innych ani na dostępność serwisu. Każda komenda kończy się (wynikiem lub
+  przekroczeniem czasu) w ≤ ok. 6 s.
+- Pełną rozgrywkę da się przejść w aktualnej mobilnej przeglądarce (Chrome na Androidzie, Safari
+  na iOS) na danych komórkowych, bez zależności od Wi-Fi organizatora.
+
+## Non-Goals
+
+Funkcjonalne:
+- **Brak CTA rekrutacyjnego w grze.** Ludzie i tak podchodzą do stoiska po nagrody, a rozmowa
+  rekrutacyjna odbywa się tam.
+- **Brak walki z oszukiwaniem.** Nie ma anti-cheatu ani wykrywania AI. Wyciąganie odpowiedzi
+  z systemu (np. `strings` na binarce) i sprawne użycie AI są dozwolone i traktowane jako sygnał
+  dociekliwości.
+- **Brak celowo ukrytych odpowiedzi w stronie.** Nie umieszczamy ich specjalnie. Kto „schakuje”
+  system, zasługuje na 42/42.
+- **Brak podpowiedzi i rozwiązań w UI.** Nie ma „show solution”, rozwiązań innych graczy ani
+  linku do repozytorium z odpowiedziami. Na stronie nie może być żadnego linku prowadzącego do
+  odpowiedzi.
+- **Tylko zestaw główny zadań.** Bez `12days` i `oops` oraz bez własnych, nowych zadań. Zadania,
+  które psują się pod utwardzeniem piaskownicy, wycinamy, a nie naprawiamy.
+- **Jedno wydarzenie, bez kont i historii graczy.** Nie obsługujemy wielu wydarzeń, kont, profili
+  ani historii gier ponad jedną sesję.
+- **Brak publicznego rankingu.** Hall of fame widzi tylko obsługa i ekran przy stoisku.
+- **Brak zbierania e-maili i innych danych osobowych.** Zbieramy tylko nick.
+- **Brak ręcznej korekty lub unieważniania wyniku w panelu.** Dyskwalifikacja odbywa się przez
+  ukrycie nicku, a wyjątkowe korekty ręcznie w bazie.
+- **Brak punktów za trudność zadania i pomijania zadań.**
+
+Niefunkcjonalne:
+- **Brak gwarancji wydajności przy tłoku.** Opóźnienie ok. 1 s na komendę przy wielu
+  równoczesnych graczach jest akceptowane.
+- **Brak twardej blokady powtórnej gry.** Blokada w przeglądarce jest tylko miękka
+  (nice-to-have), a obejście przez incognito jest akceptowane.
+
+## Product framing
+
+- `product_type: web-app`
+- `target_scale.users: large` (ankieta: „do dziesięciu tysięcy”; idea.md szacuje dziesiątki do
+  kilkuset graczy w trakcie wydarzenia)
+- `timeline_budget.mvp_weeks: 1`
+- `timeline_budget.hard_deadline: 2026-10-03`
+- `timeline_budget.after_hours_only: false` (praca w ramach dnia roboczego)
+- Pytanie kontrolne o 100x skalę: reguła rankingu się nie zmienia. Wąskim gardłem byłaby
+  przepustowość wykonywania komend (kontener na każdą komendę). Na to wydarzenie akceptowane.
+
+## Timeline budget
+
+- `mvp_weeks: 1`: zakres świadomie przycięty. Termin wydarzenia to 2026-10-03, czyli 4 dni od
+  rozpoczęcia prac (2026-09-29). Decyzja: tniemy zakres do must-have na dzień wydarzenia.
+
+## Quality cross-check
+
+Uruchomiony 2026-09-29. Wszystkie elementy obecne (Access Control, Business Logic, artefakty,
+akceptacja kosztu czasu, Non-Goals). Brak luk. Otwarte kwestie są w `## Open Questions`.
+
+## Forward: tech-stack
+
+Informacyjnie, poza PRD. Decyzje już podjęte w `idea.md` (sekcja 5) do potwierdzenia na etapie
+wyboru stacku:
+- Nowy projekt w Pythonie na Django (Django admin jako panel obsługi), a nie fork cmdchallenge.
+- `sandbox/`: skopiowany moduł Go z cmdchallenge (`cmd/`, `internal/`, `var/`, `go.mod`,
+  `Dockerfile-cmd`) plus LICENSE (MIT, zachować copyright). Służy tylko do zbudowania obrazu `cmd`.
+  Weryfikacja (checks i randomizery) zostaje w Go, wewnątrz kontenera. Backend czyta JSON
+  `CmdResponse` ze stdout.
+- Uruchamianie kontenera przez Python Docker SDK. Lista, opisy i kolejność zadań czytane
+  z `challenges.yaml` (filtr: brak tagów).
+- Frontend: szablony Django plus trochę JS (jquery.terminal albo prostsze pole z historią).
+- SQLite, jedna dedykowana VM, snapshot, kopia bazy poza VM co kilka minut, HTTPS (np. Caddy).
+- Utwardzenie kontenera: `network_mode=none`, limit pamięci, `pids_limit`, `nano_cpus`,
+  `cap_drop=ALL` (do sprawdzenia), usuwanie kontenera, timeout hosta ok. 6 s, limit długości
+  komendy 300 znaków, rate limit per sesja, brak publicznych endpointów diagnostycznych.
+- Architektura amd64/arm64 (`BUILD_ARCH`). Przy przycięciu zakresu wystarczy jedna.
+
+## Forward: technical-roadmap
+
+- Przed wydarzeniem: uruchomić wzorcowe rozwiązania (`example`) wszystkich 42 zadań pod
+  docelowym utwardzeniem i wyciąć te, które nie przechodzą.
+- Przetestować scenariusz przywrócenia VM ze snapshotu razem z odtworzeniem bazy z kopii.
+
+## Open Questions
+
+1. **Jakie jest status quo i jego koszt?** Pierwsze takie wydarzenie, brak danych o tym, jak
+   stoisko radzi sobie bez gry. Właściciel: użytkownik.
+2. **Jakie są nagrody?** Czy zależą od miejsca lub wyniku, czy są za sam udział? Właściciel:
+   użytkownik. Termin: przed 2026-10-03.
+3. **Rozmiar top N i liczba „ostatnich wyników” na ekranie, częstotliwość odświeżania.**
+   Właściciel: użytkownik. Termin: w trakcie implementacji.
+4. **Które z 42 zadań wyciąć?** Zależy od testu wzorcowych rozwiązań pod utwardzeniem.
+   Właściciel: użytkownik. Termin: przed 2026-10-03.
+5. **Hosting VM i domena.** Właściciel: użytkownik. Termin: przed 2026-10-03. Blokuje wdrożenie.
+6. **Domyślny czas ważności tokenu QR i częstotliwość jego rotacji.** Przyjęto ok. 15 minut,
+   z możliwością zmiany przez obsługę. Właściciel: użytkownik.
