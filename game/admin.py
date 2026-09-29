@@ -1,4 +1,4 @@
-"""Read-only inspection of games during the event. S-04 builds the real staff tooling."""
+"""Read-only inspection of games during the event. Prize desk tooling lives at /staff."""
 
 from django.contrib import admin
 
@@ -25,6 +25,8 @@ class AttemptInline(ReadOnlyMixin, admin.TabularInline):
 
 @admin.register(GameSession)
 class GameSessionAdmin(ReadOnlyMixin, admin.ModelAdmin):
-    list_display = ('nick', 'code', 'started_at', 'deadline_at', 'solved', 'attempts', 'finished_at')
+    list_display = ('nick', 'code', 'started_at', 'deadline_at', 'solved', 'attempts', 'finished_at',
+                    'prize_given_at')
+    list_filter = (('prize_given_at', admin.EmptyFieldListFilter),)
     search_fields = ('nick', 'code')
     inlines = [AttemptInline]

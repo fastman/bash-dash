@@ -29,6 +29,15 @@ def clock(remaining_ms) -> str:
 
 
 @register.filter
+def mmss(delta) -> str:
+    """Format a timedelta as m:ss, rounding DOWN to whole seconds ("—" for None)."""
+    if delta is None:
+        return '\u2014'
+    seconds = max(0, int(delta.total_seconds()))
+    return f'{seconds // 60}:{seconds % 60:02d}'
+
+
+@register.filter
 def duration_text(seconds) -> str:
     seconds = int(seconds)
     if seconds % 60 == 0:

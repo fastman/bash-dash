@@ -16,6 +16,7 @@ class GameSession(models.Model):
     Finished <=> ``finished_at`` is set. ``current_slug`` None <=> nothing left to solve;
     a timed-out game keeps its ``current_slug``.
     ``code`` is the unique 6-digit prize code shown on the summary page.
+    ``prize_given_at`` is set once, when booth staff hand out the prize.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -30,6 +31,7 @@ class GameSession(models.Model):
     last_solved_at = models.DateTimeField(null=True)
     finished_at = models.DateTimeField(null=True)
     code = models.CharField(max_length=6, unique=True, editable=False, default=generate_code)
+    prize_given_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     def __str__(self):
         return f'{self.nick} ({self.id})'
@@ -37,6 +39,10 @@ class GameSession(models.Model):
     @property
     def is_finished(self) -> bool:
         return self.finished_at is not None
+
+    @property
+    def prize_given(self) -> bool:
+        return self.prize_given_at is not None
 
     @property
     def timed_out(self) -> bool:

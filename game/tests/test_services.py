@@ -424,3 +424,65 @@ class TimeLimitTests(ServiceTestCase):
         stamped = self.fresh(self.game)
         services.current_challenge(stamped)
         self.assertEqual(self.fresh(self.game).finished_at, stamped.deadline_at)
+
+
+class PrizeTests(ServiceTestCase):
+    CODE = '987654'
+
+    def finished(self, **kw):
+        game = services.start_game('neo')
+        now = timezone.now()
+        fields = dict(code=self.CODE, finished_at=now, solved=1, last_solved_at=now)
+        fields.update(kw)
+        GameSession.objects.filter(pk=game.pk).update(**fields)
+        return self.fresh(game)
+
+    def test_normalize_code(self):
+        for raw, want in [('987654', '987654'), (' 987 654 ', '987654'), ('000042', '000042'),
+                          ('12345', None), ('1234567', None), ('abcdef', None), ('', None)]:
+            self.assertEqual(services.normalize_code(raw), want, raw)
+
+    def test_find_by_code(self):
+        game = self.finished()
+        self.assertEqual(services.find_by_code(self.CODE), game)
+        self.assertIsNone(services.find_by_code('111111'))
+
+    def test_find_by_code_expires_overdue_game(self):
+        game = services.start_game('neo')
+        GameSession.objects.filter(pk=game.pk).update(
+            code=self.CODE, deadline_at=timezone.now() - timedelta(seconds=1))
+        self.assertTrue(services.find_by_code(self.CODE).is_finished)
+
+    def test_mark_prize_given_only_once(self):
+        game = self.finished()
+        first, marked = services.mark_prize_given(game.pk)
+        self.assertTrue(marked)
+        self.assertIsNotNone(first.prize_given_at)
+        self.assertTrue(first.prize_given)
+        second, marked = services.mark_prize_given(game.pk)
+        self.assertFalse(marked)
+        self.assertEqual(second.prize_given_at, first.prize_given_at)
+
+    def test_mark_prize_refused_for_unfinished_game(self):
+        game = services.start_game('neo')
+        result_game, marked = services.mark_prize_given(game.pk)
+        self.assertFalse(marked)
+        self.assertIsNone(result_game.prize_given_at)
+
+    def test_mark_prize_expires_overdue_game_first(self):
+        game = services.start_game('neo')
+        GameSession.objects.filter(pk=game.pk).update(deadline_at=timezone.now() - timedelta(seconds=1))
+        result_game, marked = services.mark_prize_given(game.pk)
+        self.assertTrue(marked)
+        self.assertTrue(result_game.is_finished)
+
+    def test_mark_prize_unknown_id_raises(self):
+        import uuid
+        with self.assertRaises(GameSession.DoesNotExist):
+            services.mark_prize_given(uuid.uuid4())
+
+    def test_solve_time(self):
+        game = services.start_game('neo')
+        self.assertIsNone(services.solve_time(game))
+        game.last_solved_at = game.started_at + timedelta(seconds=75)
+        self.assertEqual(services.solve_time(game), timedelta(seconds=75))

@@ -8,6 +8,7 @@ then one short ``transaction.atomic()`` for the Attempt + conditional updates.
 """
 
 import logging
+import re
 import threading
 from dataclasses import dataclass
 from datetime import timedelta
@@ -29,6 +30,7 @@ logger = logging.getLogger('game')
 TIMED_OUT_Q = Q(finished_at=F('deadline_at'), current_slug__isnull=False)
 
 NICK_MAX_CHARS = 20
+CODE_RE = re.compile(r'^\d{6}$')
 CODE_ATTEMPTS = 10
 
 # SubmitOutcome.status values. Only RAN is counted as an attempt.
@@ -229,3 +231,38 @@ def _record(game: GameSession, challenge: Challenge, command: str, result: sandb
 
 def last_attempt(game: GameSession) -> Attempt | None:
     return game.attempt_set.order_by('-created_at', '-pk').first()
+
+
+def normalize_code(raw: str) -> str | None:
+    """A 6-digit prize code from staff input (whitespace ignored), or None if malformed."""
+    code = re.sub(r'\s+', '', raw or '')
+    return code if CODE_RE.match(code) else None
+
+
+def find_by_code(code: str) -> GameSession | None:
+    """The game with this prize code, with an overdue game already finished."""
+    game = GameSession.objects.filter(code=code).first()
+    if game is None:
+        return None
+    expire_overdue(game.pk)
+    return GameSession.objects.get(pk=game.pk)
+
+
+def mark_prize_given(game_id, now=None) -> tuple[GameSession, bool]:
+    """Mark the prize given, once. Returns ``(game, marked_by_this_call)``.
+
+    False means it was already marked or the game is unfinished (see ``game.is_finished``).
+    A single guarded UPDATE keeps concurrent presses safe.
+    """
+    now = now or timezone.now()
+    expire_overdue(game_id)
+    marked = GameSession.objects.filter(
+        pk=game_id, finished_at__isnull=False, prize_given_at__isnull=True).update(prize_given_at=now)
+    return GameSession.objects.get(pk=game_id), bool(marked)
+
+
+def solve_time(game: GameSession) -> timedelta | None:
+    """Time from start to the last solve; None when nothing was solved."""
+    if game.last_solved_at is None:
+        return None
+    return game.last_solved_at - game.started_at

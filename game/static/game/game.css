@@ -137,3 +137,14 @@ button:disabled, input:disabled { opacity: 0.6; }
   user-select: all;
 }
 .muted { color: var(--muted); font-size: 0.85rem; }
+
+.staff form { margin: 12px 0; }
+.staff input[name="code"] { width: 100%; box-sizing: border-box; font-family: var(--mono); font-size: 1.5rem; letter-spacing: 0.15em; }
+.staff-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 16px 0; overflow-wrap: anywhere; }
+.staff-nick { font-size: 2rem; font-weight: bold; margin: 0; }
+.notice-ok, .notice-warn, .notice-bad { border: 1px solid; border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
+.notice-ok { color: var(--accent); }
+.notice-warn { color: var(--warn); }
+.notice-bad { color: var(--bad); }
+.prize-button { width: 100%; font-size: 1.25rem; padding: 16px; }
+.logout .link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 0; cursor: pointer; }
