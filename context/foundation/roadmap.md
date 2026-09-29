@@ -142,7 +142,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** zamyka pętlę gracza i wprowadza regułę rankingu, z której korzystają S-04 i S-05; unikalność kodu musi być gwarantowana, bo tylko po nim obsługa identyfikuje gracza.
-- **Status:** proposed
+- **Status:** done
 
 ### S-04: Obsługa weryfikuje kod i wydaje nagrodę
 
