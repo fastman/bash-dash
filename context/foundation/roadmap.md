@@ -43,7 +43,7 @@ techniczna (integracja, utwardzenie, ok. 6 s na komendę).
 | S-01 | first-sandboxed-command       | gracz podaje nick, startuje i rozwiązuje zadania po kolei komendami wykonywanymi w sandboxie             | F-01          | US-01, FR-002, FR-003, FR-004, FR-005       | done     |
 | S-02 | server-side-time-limit        | gracz widzi pozostały czas, po odświeżeniu wraca do tej samej sesji, a gra kończy się po 5 min lub po wszystkich zadaniach | S-01          | US-01, FR-006, FR-007                       | done |
 | S-03 | summary-with-prize-code       | gracz po zakończeniu gry widzi liczbę zadań, podejść, miejsce w rankingu i unikalny 6-cyfrowy kod        | S-02          | US-01, FR-008                               | done     |
-| S-04 | staff-code-lookup-and-prize   | obsługa loguje się hasłem, znajduje wynik po kodzie i oznacza „nagroda wydana”                          | S-03          | US-01, FR-011, FR-013                       | proposed |
+| S-04 | staff-code-lookup-and-prize   | obsługa loguje się hasłem, znajduje wynik po kodzie i oznacza „nagroda wydana”                          | S-03          | US-01, FR-011, FR-013                       | done     |
 | S-05 | hall-of-fame-screen           | obsługa wyświetla auto-odświeżany ranking top N z ostatnimi wynikami i ukrywa nicki (dyskwalifikacja)   | S-03          | US-01, FR-010, FR-012                       | proposed |
 | S-06 | qr-token-gate                 | gracz może zacząć grę tylko po zeskanowaniu aktualnego, rotującego QR z ekranu rankingu                 | S-01, S-05    | US-01, FR-001, FR-017                       | proposed |
 
@@ -155,7 +155,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Jakie są nagrody i czy zależą od miejsca (Open Question 2)? — Owner: user. Block: no (oznaczenie „wydana” działa niezależnie od rodzaju nagrody).
 - **Risk:** spełnia główne kryterium sukcesu („każdy wydany kod da się zweryfikować”); tanie dzięki panelowi admina, więc nie ma powodu odkładać go za ekran rankingu.
-- **Status:** proposed
+- **Status:** done
 
 ### S-05: Ekran Hall of fame z moderacją nicków
 
@@ -231,3 +231,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-01: gracz czyta zasady, podaje nick, klika „Start” i rozwiązuje zadania po kolei, wpisując komendy wykonywane w sandboxie; widzi wyjście i informację „poprawne/niepoprawne”, a każda komenda zwiększa licznik podejść.** — Archived 2026-09-29 → `context/archive/2026-09-29-first-sandboxed-command/`. Lesson: —.
 - **S-02: gracz widzi pozostały czas, po odświeżeniu strony wraca do tej samej sesji z tym samym czasem, a gra kończy się po 5 minutach od „Start” lub po rozwiązaniu wszystkich zadań; komendy wysłane po czasie się nie liczą.** — Archived 2026-09-29 → `context/archive/2026-09-29-server-side-time-limit/`. Lesson: —.
 - **S-03: gracz po zakończeniu gry widzi liczbę rozwiązanych zadań, liczbę podejść, swoje miejsce w rankingu i unikalny 6-cyfrowy kod.** — Archived 2026-09-29 → `context/archive/2026-09-29-summary-with-prize-code/`. Lesson: —.
+- **S-04: obsługa loguje się hasłem, wyszukuje wynik po 6-cyfrowym kodzie (nick, zadania, podejścia, miejsce, czas) i oznacza „nagroda wydana”.** — Archived 2026-09-29 → `context/archive/2026-09-29-staff-code-lookup-and-prize/`. Lesson: —.
