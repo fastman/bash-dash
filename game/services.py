@@ -124,20 +124,28 @@ def submit_command(game_id, command: str) -> SubmitOutcome:
                      challenge.slug, command, result.error_internal)
         return SubmitOutcome(INTERNAL, result, game)
 
-    _record(game, challenge, command, result)
+    counted = _record(game, challenge, command, result)
     game.refresh_from_db()
-    return SubmitOutcome(RAN, result, game)
+    return SubmitOutcome(RAN if counted else FINISHED, result if counted else None, game)
 
 
-def _record(game: GameSession, challenge: Challenge, command: str, result: sandbox.SandboxResult) -> None:
+def _record(game: GameSession, challenge: Challenge, command: str, result: sandbox.SandboxResult) -> bool:
+    """Count the run and store its Attempt, unless the game finished while it ran.
+
+    The counter update goes first and gates the insert, so Attempt rows and
+    ``GameSession.attempts`` always agree. Returns whether the run was counted.
+    """
     now = timezone.now()
     with transaction.atomic():
+        counted = GameSession.objects.filter(pk=game.pk, finished_at__isnull=True).update(
+            attempts=F('attempts') + 1)
+        if not counted:
+            return False
         Attempt.objects.create(
             game=game, slug=challenge.slug, command=command, correct=result.correct,
             output=result.output, error=result.error[:255], timed_out=result.timed_out,
             duration_ms=round(result.duration_s * 1000),
         )
-        GameSession.objects.filter(pk=game.pk, finished_at__isnull=True).update(attempts=F('attempts') + 1)
         if result.correct:
             nxt = catalog.next_playable(challenge.slug)
             # The current_slug guard makes a duplicate correct submit advance once.
@@ -147,6 +155,7 @@ def _record(game: GameSession, challenge: Challenge, command: str, result: sandb
                 current_slug=nxt.slug if nxt else None,
                 finished_at=None if nxt else now,
             )
+    return True
 
 
 def last_attempt(game: GameSession) -> Attempt | None:

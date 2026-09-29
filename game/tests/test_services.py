@@ -2,6 +2,7 @@ import threading
 from unittest import mock
 
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from challenges import catalog, sandbox
 from challenges.tests.fakes import write_excluded
@@ -169,6 +170,19 @@ class SubmitCommandTests(ServiceTestCase):
         self.assertEqual(calls, ['hello_world', 'hello_world'])
         game = self.fresh(self.game)
         self.assertEqual((game.attempts, game.solved, game.current_slug), (2, 1, self.order[1]))
+
+    def test_run_that_overlaps_the_game_finishing_is_neither_stored_nor_counted(self):
+        # e.g. a second tab solved the last challenge (or, later, the time limit hit) mid-run.
+        def run(challenge, command):
+            GameSession.objects.filter(pk=self.game.pk).update(current_slug=None, finished_at=timezone.now())
+            return result(False, output='late')
+
+        self.run_command.side_effect = run
+        outcome = services.submit_command(self.game.id, 'ls')
+        self.assertEqual(outcome.status, 'finished')
+        self.assertTrue(outcome.game.is_finished)
+        self.assertEqual(Attempt.objects.count(), 0)
+        self.assertEqual(self.fresh(self.game).attempts, 0)
 
     def test_last_attempt_is_the_most_recent_run(self):
         self.assertIsNone(services.last_attempt(self.game))
