@@ -6,14 +6,14 @@ Replace the placeholder `/done` page with the real end-of-game summary (FR-008).
 
 ## Current State Analysis
 
-- `GameSession` (`game/models.py:7-35`) already holds the ranking inputs as denormalised counters: `solved`, `attempts`, `started_at`, `last_solved_at` and `finished_at`. It has no prize code.
+- `GameSession` (`game/models.py:7-36`) already holds the ranking inputs as denormalised counters: `solved`, `attempts`, `started_at`, `last_solved_at` and `finished_at`. It has no prize code.
 - The counters are trustworthy for ranking:
-  - The guarded update runs first and gates the `Attempt` insert, so rows and counter agree (`game/services.py:176-206`; S-01 impl-review F2).
-  - `last_solved_at` and `finished_at` are capped at `deadline_at` (`Least(now, F('deadline_at'))`, `services.py:197`), so tie-break times never exceed the limit.
-- `solved > 0` ⇔ `last_solved_at IS NOT NULL`. `last_solved_at` is set only by the solve update, and a cut-finish never sets it (`services.py:120-122`).
+  - The guarded update runs first and gates the `Attempt` insert, so rows and counter agree (`game/services.py:164-195`; S-01 impl-review F2).
+  - `last_solved_at` and `finished_at` are capped at `deadline_at` (`Least(now, F('deadline_at'))`, `services.py:188`), so tie-break times never exceed the limit.
+- `solved > 0` ⇔ `last_solved_at IS NOT NULL`. `last_solved_at` is set only by the solve update, and a cut-finish never sets it (`services.py:117-118`).
 - Every game is created through `services.start_game` (`services.py:72-83`). The callers are the view, `bench_game` and tests. There are no other `GameSession.objects.create` sites.
-- Abandoned games stay unfinished until something reads them. `services.expire_overdue()` with no argument finishes every overdue game in bulk (`services.py:86-92`). The S-02 plan-brief states that S-03 must call it before ranking.
-- `done` (`game/views.py:189-202`) renders `game/done.html`. The page has a heading (time up / all solved / finished), the nick, `solved / total` and attempts. It redirects to `/play` for an unfinished game and to `/` when the session has no game.
+- Abandoned games stay unfinished until something reads them. `services.expire_overdue()` with no argument finishes every overdue game in bulk (`services.py:85-91`). The S-02 plan-brief states that S-03 must call it before ranking.
+- `done` (`game/views.py:175-188`) renders `game/done.html`. The page has a heading (time up / all solved / finished), the nick, `solved / total` and attempts. It redirects to `/play` for an unfinished game and to `/` when the session has no game.
 - `GameSessionAdmin` (`game/admin.py:26-30`) is read-only, with `search_fields = ('nick',)`.
 - The dev `db.sqlite3` is behind (0002 is not applied). Migrations must backfill existing rows, as 0002 does.
 - Baseline: `uv run python manage.py test game challenges` → 135 tests, OK.
@@ -84,7 +84,7 @@ Every `GameSession` has a unique 6-digit code from the moment it starts, includi
 
 **Intent**: Add the column to DBs that already have games, giving each existing row a distinct code.
 
-**Contract**: The three-step pattern from 0002: `AddField(null=True)` → `RunPython(backfill, noop)` → `AlterField` to the final definition (unique, non-null). The backfill draws codes from the generator and skips any it has already used in this run (the set of existing codes is small). Reverse is `noop` plus the auto-reversed field ops.
+**Contract**: The three-step pattern from 0002: `AddField(null=True)` with **no `default`** (a callable default there is evaluated once and written to every existing row, so a 0002-style `filter(code__isnull=True)` backfill would find nothing and the final unique `AlterField` would fail) → `RunPython(backfill, noop)` → `AlterField` to the final definition (unique, non-null). The backfill draws codes from the generator and skips any it has already used in this run (the set of existing codes is small). Reverse is `noop` plus the auto-reversed field ops.
 
 #### 3. Generation with retry in `start_game`
 
@@ -110,6 +110,7 @@ Every `GameSession` has a unique 6-digit code from the moment it starts, includi
 
 **Contract**:
 - `start_game` returns a game whose `code` matches `^\d{6}$`.
+- Patch the generator where `start_game` looks it up (e.g. `game.services.generate_code` if services imports it by name). Patching `game.models.generate_code` does not affect a name imported into services.
 - Patch the generator to return an existing game's code first, then a fresh one. `start_game` succeeds with the fresh code, and the test's outer transaction is still usable (a further query works).
 - Patch the generator to always collide. `start_game` raises `RuntimeError` and creates no row.
 - Two games never share a code (DB constraint: a direct `create` with a duplicate code raises `IntegrityError`).
@@ -156,6 +157,7 @@ Add the ranking rule once in `game/services.py` and rebuild `/done` to show solv
   - returns `(place, total)` among `ranked_games()`, or `None` if the game is not finished;
   - `place = 1 + count of ranked games strictly better`. Strictly better means: more solved; or equal solved and fewer attempts; or equal solved and attempts and a smaller `elapsed` (only when the game's own `elapsed` is not NULL);
   - `total = ranked_games().count()`.
+  - Call `ranked_games()` once per `rank_of` and reuse that queryset for both counts, so each call runs one bulk `UPDATE` (as Performance Considerations assumes).
   - Read the game's own `elapsed` from the annotated queryset (or compute it in Python from the refreshed row) so both sides use the same expression.
 
 #### 2. `done` view
@@ -197,7 +199,7 @@ Add the ranking rule once in `game/services.py` and rebuild `/done` to show solv
   - A timed-out game and an all-solved game are both ranked.
 - Views, `done`:
   - A finished game shows solved, attempts, `#place of total` and its 6-digit code.
-  - The code is absent from `/play` HTML, the `/play/command` JSON and the `/play/state` JSON.
+  - The code is absent from `/play` HTML, the `/play/command` JSON and the `/play/state` JSON. Pin the code to a fixed value above 300000 (e.g. `'987654'`) first, so a random code can never match `remaining_ms` or other digits on the page by chance.
   - Existing redirects still hold (no game → `/`, active game → `/play`).
   - The `NoAnswerLinksTests` "no external links" check still passes for `/done`.
 
@@ -254,7 +256,7 @@ Each `/done` load runs one bulk `UPDATE` (indexed on `deadline_at`, filtered on 
 - S-02 plan (`expire_overdue`, capped timestamps, `TIMED_OUT_Q`): `context/archive/2026-09-29-server-side-time-limit/plan.md`
 - S-01 plan addenda and impl-review F2 (counter is the source of truth): `context/archive/2026-09-29-first-sandboxed-command/`
 - Backfill migration pattern: `game/migrations/0002_gamesession_deadline_at.py`
-- Game rules module: `game/services.py:72-92, 176-206`; summary view: `game/views.py:189-202`
+- Game rules module: `game/services.py:72-91, 164-195`; summary view: `game/views.py:175-188`
 
 ## Progress
 
