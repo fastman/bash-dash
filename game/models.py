@@ -1,15 +1,22 @@
 import uuid
 
 from django.db import models
+from django.utils import timezone
 
 
 class GameSession(models.Model):
-    """One player's game. Counters are denormalised for S-02 (time limit) and S-03 (ranking)."""
+    """One player's game. Counters are denormalised for S-02 (time limit) and S-03 (ranking).
+
+    Finished <=> ``finished_at`` is set. ``current_slug`` None <=> nothing left to solve;
+    a timed-out game keeps its ``current_slug``.
+    """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     nick = models.CharField(max_length=20)
-    started_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    # None means finished (always together with finished_at).
+    # default (not auto_now_add) so start_game can store one instant in started_at and deadline_at.
+    started_at = models.DateTimeField(default=timezone.now, db_index=True)
+    deadline_at = models.DateTimeField(db_index=True)
+    # None means nothing left to solve (all solved, or the catalog ran out).
     current_slug = models.CharField(max_length=64, null=True)
     attempts = models.PositiveIntegerField(default=0)
     solved = models.PositiveIntegerField(default=0)
@@ -22,6 +29,11 @@ class GameSession(models.Model):
     @property
     def is_finished(self) -> bool:
         return self.finished_at is not None
+
+    @property
+    def timed_out(self) -> bool:
+        """The clock ended this game (it still has a current challenge)."""
+        return self.finished_at is not None and self.current_slug is not None
 
 
 class Attempt(models.Model):

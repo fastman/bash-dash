@@ -9,5 +9,6 @@ urlpatterns = [
     path('start', views.start, name='start'),
     path('play', views.play, name='play'),
     path('play/command', views.command, name='command'),
+    path('play/state', views.state, name='state'),
     path('done', views.done, name='done'),
 ]

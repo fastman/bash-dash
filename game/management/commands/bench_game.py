@@ -21,7 +21,9 @@ from game.models import GameSession
 
 WRONG_COMMAND = 'echo bench-wrong-answer'
 ABUSE_COMMAND = 'sleep 60'
-FAILING_STATUSES = (services.INTERNAL, services.UNAVAILABLE)
+# time_up means the run outlasted GAME_DURATION_S: those submits never reach the sandbox,
+# so they are kept out of the latency samples and fail the run instead of skewing the numbers.
+FAILING_STATUSES = (services.INTERNAL, services.UNAVAILABLE, services.TIME_UP)
 
 
 def leaked_containers() -> list:
@@ -78,7 +80,8 @@ class Command(BaseCommand):
                     dt = time.monotonic() - t0
                     game = outcome.game
                     with lock:
-                        samples.append((abuser, dt))
+                        if outcome.status != services.TIME_UP:
+                            samples.append((abuser, dt))
                         statuses[outcome.status] += 1
             finally:
                 connection.close()  # each thread has its own DB connection

@@ -1,12 +1,14 @@
 import json
 import re
+from datetime import timedelta
 from unittest import mock
 
 import docker.errors
 import requests.exceptions
 
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from challenges import catalog, sandbox
 from game import services, views
@@ -276,3 +278,93 @@ class DescriptionFilterTests(TestCase):
     def test_every_catalog_description_renders(self):
         for ch in catalog.all_main_set():
             self.assertNotIn('```', render_description(ch.description), ch.slug)
+
+
+class TimeLimitViewTests(ViewTestCase):
+    def expire(self):
+        GameSession.objects.filter(pk=self.game().pk).update(
+            deadline_at=timezone.now() - timedelta(seconds=1))
+
+    def test_expired_game_redirects_to_done_and_done_renders(self):
+        self.start()
+        self.expire()
+        self.assertRedirects(self.client.get(reverse('game:play')), reverse('game:done'))
+        self.assertRedirects(self.client.get(reverse('game:home')), reverse('game:done'))
+        self.assertEqual(self.client.get(reverse('game:done')).status_code, 200)
+
+    def test_late_command_is_409_time_up(self):
+        self.start()
+        self.expire()
+        resp = self.command('ls')
+        self.assertEqual(resp.status_code, 409)
+        data = resp.json()
+        self.assertEqual((data['status'], data['finished'], data['message']), ('time_up', True, "Time's up."))
+        self.assertEqual(data['remaining_ms'], 0)
+        self.run_command.assert_not_called()
+
+    def test_command_response_carries_remaining_ms_but_no_game_does_not(self):
+        self.start()
+        data = self.command('ls').json()
+        self.assertAlmostEqual(data['remaining_ms'], 300_000, delta=5_000)
+        anon = self.command('ls', client=Client())
+        self.assertEqual(anon.json()['status'], 'no_game')
+        self.assertNotIn('remaining_ms', anon.json())
+
+
+class TimerAndDoneUiTests(ViewTestCase):
+    def expire(self):
+        GameSession.objects.filter(pk=self.game().pk).update(
+            deadline_at=timezone.now() - timedelta(seconds=1))
+
+    def test_state_endpoint_fresh_game(self):
+        self.start()
+        data = self.client.get(reverse('game:state')).json()
+        self.assertFalse(data['finished'])
+        self.assertAlmostEqual(data['remaining_ms'], 300_000, delta=5_000)
+
+    def test_state_endpoint_expired_game(self):
+        self.start()
+        self.expire()
+        self.assertEqual(self.client.get(reverse('game:state')).json(), {'remaining_ms': 0, 'finished': True})
+
+    def test_state_endpoint_without_game_is_no_game(self):
+        resp = self.client.get(reverse('game:state'))
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.json()['status'], 'no_game')
+
+    def test_state_endpoint_is_get_only(self):
+        self.start()
+        self.assertEqual(self.client.post(reverse('game:state')).status_code, 405)
+
+    def test_play_renders_timer(self):
+        self.start()
+        resp = self.client.get(reverse('game:play'))
+        self.assertContains(resp, 'id="timer"')
+        ms = int(re.search(r'data-remaining-ms="(\d+)"', resp.content.decode()).group(1))
+        self.assertAlmostEqual(ms, 300_000, delta=5_000)
+        self.assertRegex(resp.content.decode(), r'id="timer"[^>]*>[45]:[0-5]\d<')
+
+    def test_done_says_time_is_up(self):
+        self.start()
+        self.expire()
+        self.assertContains(self.client.get(reverse('game:done')), "Time's up!")
+
+    def test_done_says_all_solved(self):
+        self.start()
+        GameSession.objects.filter(pk=self.game().pk).update(
+            current_slug=None, finished_at=timezone.now(), solved=len(self.order))
+        self.assertContains(self.client.get(reverse('game:done')), 'All challenges solved!')
+
+    def test_done_is_neutral_when_catalog_ran_out(self):
+        self.start()
+        GameSession.objects.filter(pk=self.game().pk).update(
+            current_slug=None, finished_at=timezone.now(), solved=0)
+        resp = self.client.get(reverse('game:done'))
+        self.assertContains(resp, 'Finished!')
+        self.assertNotContains(resp, 'All challenges solved!')
+        self.assertNotContains(resp, 'up!')
+
+    def test_home_duration_follows_setting(self):
+        self.assertContains(self.client.get(reverse('game:home')), '5 minutes')
+        with override_settings(GAME_DURATION_S=120):
+            self.assertContains(self.client.get(reverse('game:home')), '2 minutes')

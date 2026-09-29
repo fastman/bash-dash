@@ -147,3 +147,6 @@ CHALLENGES_EXCLUDED = BASE_DIR / 'challenges/excluded.yaml'
 # Game sandbox concurrency (S-01). Per process: total = worker processes × cap.
 SANDBOX_MAX_CONCURRENT = int(os.environ.get('BASHDASH_SANDBOX_CONCURRENCY', 8))
 SANDBOX_QUEUE_TIMEOUT_S = 10
+
+# Game time limit (S-02)
+GAME_DURATION_S = int(os.environ.get('BASHDASH_GAME_DURATION_S', 300))

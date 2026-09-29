@@ -4,13 +4,14 @@
 <div class="counters" id="counters" data-attempts="{{ game.attempts }}">
   <span>Attempts: <strong id="attempts">{{ game.attempts }}</strong></span>
   <span>Solved: <strong id="solved">{{ game.solved }}</strong></span>
+  <span>Time: <strong id="timer" data-remaining-ms="{{ remaining_ms }}">{{ remaining_ms|clock }}</strong></span>
 </div>
 <section class="challenge">
   <p class="index" id="challenge-index">{{ info.index }} / {{ info.total }}</p>
   <h1 id="challenge-title">{{ challenge.title }}</h1>
   <div class="description" id="challenge-description">{{ challenge.description|render_description }}</div>
 </section>
-<form id="command-form" class="command" data-url="{% url 'game:command' %}" data-done-url="{% url 'game:done' %}">
+<form id="command-form" class="command" data-url="{% url 'game:command' %}" data-done-url="{% url 'game:done' %}" data-state-url="{% url 'game:state' %}">
   <span class="prompt">$</span>
   <input id="command" name="command" type="text" maxlength="300" required
          autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" enterkeyhint="send"

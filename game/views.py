@@ -2,6 +2,7 @@
 
 import json
 
+from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -21,6 +22,7 @@ HTTP_STATUS = {
     services.UNAVAILABLE: 503,
     services.BUSY: 503,
     services.INTERNAL: 500,
+    services.TIME_UP: 409,
 }
 
 MESSAGES = {
@@ -30,6 +32,7 @@ MESSAGES = {
     services.UNAVAILABLE: 'Sandbox unavailable, try again.',
     services.BUSY: 'Server busy, try again in a moment.',
     services.INTERNAL: 'Internal error, try again.',
+    services.TIME_UP: "Time's up.",
 }
 # A valid body is at most ~1.2 KB ({"command": <300 chars, JSON-escaped>}); anything
 # bigger is rejected before parsing, which also bounds json's recursion depth.
@@ -54,6 +57,7 @@ def _session_game(request) -> GameSession | None:
     game_id = request.session.get('game_id')
     if not game_id:
         return None
+    services.expire_overdue(game_id)
     return GameSession.objects.filter(pk=game_id).first()
 
 
@@ -70,6 +74,9 @@ def _challenge_info(challenge) -> dict | None:
     }
 
 
+NO_GAME = {'status': 'no_game', 'message': 'No game in progress.'}
+
+
 def _redirect_existing(game: GameSession):
     return redirect('game:done' if game.is_finished else 'game:play')
 
@@ -79,7 +86,7 @@ def home(request):
     game = _session_game(request)
     if game:
         return _redirect_existing(game)
-    return render(request, 'game/home.html')
+    return render(request, 'game/home.html', {'duration': settings.GAME_DURATION_S})
 
 
 @require_POST
@@ -92,6 +99,7 @@ def start(request):
         game = services.start_game(nick)
     except ValueError:
         return render(request, 'game/home.html', {
+            'duration': settings.GAME_DURATION_S,
             'error': f'Enter a nick of 1-{services.NICK_MAX_CHARS} characters.', 'nick': nick})
     request.session['game_id'] = str(game.pk)
     return redirect('game:play')
@@ -103,6 +111,8 @@ def play(request):
     game = _session_game(request)
     if game is None:
         return redirect('game:home')
+    if game.is_finished:
+        return redirect('game:done')
     challenge = services.current_challenge(game)
     if challenge is None:
         return redirect('game:done')
@@ -112,15 +122,25 @@ def play(request):
         'challenge': challenge,
         'info': _challenge_info(challenge),
         'last': last,
+        'remaining_ms': services.remaining_ms(game),
         'last_verdict': verdict(last.correct, last.error, last.timed_out) if last else '',
     })
+
+
+@require_GET
+def state(request):
+    """Authoritative remaining time, for clients whose monotonic clock may have paused."""
+    game = _session_game(request)
+    if game is None:
+        return JsonResponse(NO_GAME, status=403)
+    return JsonResponse({'remaining_ms': services.remaining_ms(game), 'finished': game.is_finished})
 
 
 @require_POST
 def command(request):
     game = _session_game(request)
     if game is None:
-        return JsonResponse({'status': 'no_game', 'message': 'No game in progress.'}, status=403)
+        return JsonResponse(NO_GAME, status=403)
     if len(request.body) > MAX_BODY_BYTES:
         return JsonResponse({**BAD_REQUEST, 'message': 'Request too large.'}, status=413)
     try:
@@ -140,6 +160,7 @@ def command(request):
         'attempts': game.attempts,
         'solved': game.solved,
         'finished': game.is_finished,
+        'remaining_ms': services.remaining_ms(game),
         'challenge': _challenge_info(challenge),
     }
     if outcome.status == services.RAN:
@@ -158,4 +179,10 @@ def done(request):
         return redirect('game:home')
     if not game.is_finished:
         return redirect('game:play')
-    return render(request, 'game/done.html', {'game': game, 'total': len(catalog.main_set())})
+    total = len(catalog.main_set())
+    return render(request, 'game/done.html', {
+        'game': game,
+        'total': total,
+        'timed_out': game.timed_out,
+        'all_solved': not game.timed_out and game.solved >= total,
+    })
