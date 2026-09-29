@@ -20,3 +20,6 @@ db.sqlite3-shm
 .idea/
 .vscode/
 .DS_Store
+
+# Claude Code local state
+.claude/
