@@ -1,10 +1,10 @@
 ---
 change_id: summary-with-prize-code
 title: Summary with prize code
-status: impl_reviewed
+status: archived
 created: 2026-09-29
 updated: 2026-09-29
-archived_at: null
+archived_at: 2026-09-29T19:38:00Z
 ---
 
 ## Notes
