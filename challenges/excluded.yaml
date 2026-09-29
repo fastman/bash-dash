@@ -1,1 +1,7 @@
+# Cut list: main-set challenges that are not playable in bash-dash.
+# Format: `slug: "one-line reason from verify_challenges"`. Unknown slugs raise.
+# Cut, never fix (PRD Non-Goals). Re-run `manage.py verify_challenges` after edits.
+#
+# F-01 sweep (2026-09-29, dev host, also --host-cpus 2): all 42 pass -> no cuts.
+# Re-run on the event VM in F-02 and cut any new failure here.
 {}

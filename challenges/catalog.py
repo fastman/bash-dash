@@ -24,6 +24,7 @@ class Challenge:
     dir: str
     example: str
     expected_failures: tuple[str, ...]
+    expected_lines: tuple[str, ...] = ()
 
 
 def _to_challenge(entry: dict) -> Challenge:
@@ -35,6 +36,7 @@ def _to_challenge(entry: dict) -> Challenge:
         dir=entry.get('dir') or slug,
         example=entry['example'],
         expected_failures=tuple(entry.get('expected_failures') or ()),
+        expected_lines=tuple(str(x) for x in (entry.get('expected_output') or {}).get('lines') or ()),
     )
 
 

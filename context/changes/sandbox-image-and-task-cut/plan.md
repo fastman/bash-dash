@@ -419,27 +419,27 @@ None. There is no data, and this is the first app in the project.
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `uv run python manage.py test challenges`
-- [x] 2.2 Django check passes: `uv run python manage.py check`
-- [x] 2.3 Real smoke run via `manage.py shell` shows `correct=True`
+- [x] 2.1 Unit tests pass: `uv run python manage.py test challenges` — 1109789
+- [x] 2.2 Django check passes: `uv run python manage.py check` — 1109789
+- [x] 2.3 Real smoke run via `manage.py shell` shows `correct=True` — 1109789
 
 #### Manual
 
-- [x] 2.4 `SANDBOX_RUN_PROFILE` matches the hardening table (single source)
+- [x] 2.4 `SANDBOX_RUN_PROFILE` matches the hardening table (single source) — 1109789
 
 ### Phase 3: Verification sweep, abuse suite, and the cut
 
 #### Automated
 
-- [ ] 3.1 Full sweep green after the cut: `uv run python manage.py verify_challenges` exits 0
-- [ ] 3.2 Emulated event-VM sweep green: `verify_challenges --host-cpus 2 --skip-abuse` exits 0
-- [ ] 3.3 All tests pass, integration tests not skipped locally
-- [ ] 3.4 No leaked sandbox containers
-- [ ] 3.5 Excluded list is valid; `main_set()` size = 42 − cuts
+- [x] 3.1 Full sweep green after the cut: `uv run python manage.py verify_challenges` exits 0
+- [x] 3.2 Emulated event-VM sweep green: `verify_challenges --host-cpus 2 --skip-abuse` exits 0
+- [x] 3.3 All tests pass, integration tests not skipped locally
+- [x] 3.4 No leaked sandbox containers
+- [x] 3.5 Excluded list is valid; `main_set()` size = 42 − cuts
 
 #### Manual
 
-- [ ] 3.6 Each cut in `excluded.yaml` is a real incompatibility, not flakiness
-- [ ] 3.7 `verification.md` has the Printable column and the F-02 VM re-run note
-- [ ] 3.8 Host stays responsive; `docker stats` shows caps holding
-- [ ] 3.9 Playable set still makes a sensible 5-minute game
+- [x] 3.6 Each cut in `excluded.yaml` is a real incompatibility, not flakiness
+- [x] 3.7 `verification.md` has the Printable column and the F-02 VM re-run note
+- [x] 3.8 Host stays responsive; `docker stats` shows caps holding
+- [x] 3.9 Playable set still makes a sensible 5-minute game

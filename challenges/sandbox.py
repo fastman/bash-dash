@@ -126,16 +126,24 @@ def _interpret(raw: bytes, state: dict, host_timed_out: bool) -> dict:
     return base
 
 
-def run_command(challenge: Challenge, command: str, *, client=None) -> SandboxResult:
+def run_command(challenge: Challenge, command: str, *, client=None,
+                host_overrides: dict | None = None) -> SandboxResult:
     """Run ``command`` for ``challenge`` under ``SANDBOX_RUN_PROFILE``.
 
     Raises ``ValueError`` for over-long commands and ``SandboxUnavailable`` if
     Docker fails before the container exists. Every outcome after the
     container has started is returned as a ``SandboxResult``; the container is
     always removed.
+
+    ``host_overrides`` is harness-only (e.g. ``cpuset_cpus`` to emulate the
+    event VM); it may add run kwargs but never replace a profile setting.
     """
     if len(command) > MAX_COMMAND_CHARS:
         raise ValueError(f'command longer than {MAX_COMMAND_CHARS} characters')
+    host_overrides = dict(host_overrides or {})
+    clash = sorted(set(host_overrides) & (set(SANDBOX_RUN_PROFILE) | {'command', 'detach'}))
+    if clash:
+        raise ValueError(f'host_overrides may not replace profile settings: {", ".join(clash)}')
     client = client or _get_client()
     b64 = base64.b64encode(command.encode()).decode()
     started = time.monotonic()
@@ -148,6 +156,7 @@ def run_command(challenge: Challenge, command: str, *, client=None) -> SandboxRe
             command=[challenge.dir, challenge.slug, b64],
             detach=True,
             **SANDBOX_RUN_PROFILE,
+            **host_overrides,
         )
     except docker.errors.DockerException as exc:
         raise SandboxUnavailable(str(exc)) from exc
