@@ -443,3 +443,21 @@ None. There is no data, and this is the first app in the project.
 - [x] 3.7 `verification.md` has the Printable column and the F-02 VM re-run note — d76d456
 - [x] 3.8 Host stays responsive; `docker stats` shows caps holding — d76d456
 - [x] 3.9 Playable set still makes a sensible 5-minute game — d76d456
+
+## Addendum (post implementation review, 2026-09-29)
+
+These changes were user-approved in `reviews/impl-review.md`. They amend the plan above.
+
+- **A1 — Go patch to runcmd (F1–F3, overrides "Go sources unmodified").** runcmd is PID 1 with the player's uid, so the player could forge a verdict through `/proc/1/fd/1` or kill it. A minimal local patch (`sandbox/cmd/runcmd/harden_linux.go`, a no-op `harden_other.go`, and one call at the top of `main()`) does two things:
+  - sets `prctl(PR_SET_DUMPABLE, 0)`
+  - catches TERM/INT/HUP/QUIT/USR1/USR2 in never-drained handlers
+
+  It is documented in `sandbox/README.md`. As a host backstop, `run_command` trusts a verdict only when stdout is exactly one non-empty line; more lines give the player error "Command interfered with the sandbox output". `sandbox-entry.sh` exits 64 (usage) and 65 (missing fixture) instead of 2 and 3, and the host maps both to `error_internal`. The abuse suite gains four scenarios: stdout injection ×20 (never Correct), a direct `yes > /proc/1/fd/1` flood, `kill -TERM/-INT/-HUP 1`, and a `/proc/1/environ` read. The abuse suite and the canary also honour `--host-cpus`.
+- **A2 — Runner lifecycle and overrides (F4, F5).** `run_command` uses `containers.create()`, then `start()` inside the try/finally that removes the container, instead of `containers.run(detach=True)`. `reap_stale` also reaps containers in the `created` state. `host_overrides` is an allowlist, `{'cpuset_cpus'}`.
+- **A3 — Deviation 1 accepted (F6).** json-file `max-size=1m` rotates, so a truncated runcmd line survives as a tail of any size. "Unparsable stdout with container exit 0" therefore maps to "Output too large", alongside the ≥900 KB rule. Exception: a whole line that starts with `{"Correct"` but fails to parse (and is under 900 KB) is `error_internal`, because that points to a runcmd bug, not the player.
+- **A4 — Deviation 2 accepted (F7).** The cut gate applies the 4.0 s threshold per challenge as well as overall. The per-challenge parallel figure is one sample (that challenge's run in the ×8 batch), so it is labelled "parallel duration", not "parallel p95".
+- **A5 — Additions not named in the plan (F8).**
+  - `challenges/verify.py` (pure report and gate logic), `challenges/tests/fakes.py` (Docker SDK fakes), and `challenges/tests/test_verify.py`
+  - `Challenge.expected_lines` and `catalog.excluded()`
+  - `verify.randomized_slugs()`, which parses the Go `rndTable` in `internal/challenge/randomizers.go` to choose the 20-run repeat
+  - The Printable column's outcome is 12 `yes` + 10 `long` + 20 `no`. That is expected: every challenge with a randomizer or a check rejects a printed answer.

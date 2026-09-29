@@ -9,6 +9,8 @@
 
 Reviewed unattended. Nothing was triaged interactively. Every finding carries a recommended resolution and `Decision: PENDING (pending user decision)`.
 
+**Resolution (2026-09-29):** The user approved fixes for every finding. Each finding's Decision below records how it was resolved, with the fixing commit.
+
 ## Verdicts
 
 | Dimension | Verdict |
@@ -74,7 +76,7 @@ Manual rows 1.6, 2.4 and 3.6–3.9 are all ticked, and each has observable evide
   - Tradeoff: leaves the channel open. F2 (host dockerd load) stays unfixed. A runcmd JSON line over 4 KB is written non-atomically (above PIPE_BUF), so a patient attacker could splice bytes mid-line. That is harder, but the verdict would still come from a stream the player can write to.
   - Confidence: MED. It closes the tested exploit, but not the root cause.
   - Blind spot: have not proven that splicing into a large JSON line can yield valid JSON with an overriding duplicate `"Correct":true`; Python's `json.loads` keeps the last duplicate key, so it is plausible.
-- **Decision**: PENDING (pending user decision)
+- **Decision**: RESOLVED — Fix A, user-approved (overrides the plan's "no Go changes" rule). There is a minimal Go patch in `cmd/runcmd/harden_linux.go`: `prctl(PR_SET_DUMPABLE, 0)` plus never-drained handlers for TERM/INT/HUP/QUIT/USR1/USR2, called first in `main()` and documented in `sandbox/README.md` (699225a). As a host backstop, a verdict is accepted only when stdout is exactly one non-empty line; anything else is a player-facing error, never Correct (463aeb2). A `stdout injection` ×20 scenario is added to the abuse suite (0854a7f). The forgery repro now gives 0/20 Correct.
 
 ### F2 — Writing directly to PID 1's stdout moves load onto the host dockerd, outside every container limit
 
@@ -93,7 +95,7 @@ Manual rows 1.6, 2.4 and 3.6–3.9 are all ticked, and each has observable evide
   - Tradeoff: same as F1 Fix A.
   - Confidence: MED. Measured on 8 cores; the 2-core impact is extrapolated.
   - Blind spot: dockerd behaviour on the event VM (F-02) is unknown.
-- **Decision**: PENDING (pending user decision)
+- **Decision**: RESOLVED — with F1's fix. `/proc/1/fd/1` is now Permission denied for the player, so `yes > /proc/1/fd/1` fails immediately (699225a). A direct-flood abuse scenario was added (0854a7f). `sandbox-entry.sh` now exits 64/65, and the host maps both to `error_internal` (699225a, 463aeb2).
 
 ### F3 — Player can kill runcmd on demand and turn their run into an `error_internal`
 
@@ -113,7 +115,7 @@ Manual rows 1.6, 2.4 and 3.6–3.9 are all ticked, and each has observable evide
   - Tradeoff: another vendored-Go line; the fallback may hide real panics.
   - Confidence: MED.
   - Blind spot: SIGURG and SIGPROF are handled by the Go runtime and are harmless, but they were not enumerated exhaustively.
-- **Decision**: PENDING (pending user decision)
+- **Decision**: RESOLVED — with F1's fix. PID 1 installs handlers for TERM/INT/HUP/QUIT/USR1/USR2, so `kill -TERM 1` is delivered and dropped. `SigIgn` in the player's bash stays 0 (699225a). A `kill -TERM/-INT/-HUP 1` abuse scenario asserts that runcmd survives and there is no `error_internal` (0854a7f).
 
 ### F4 — A container that fails to start is leaked and misreported as `SandboxUnavailable`
 
@@ -126,7 +128,7 @@ Manual rows 1.6, 2.4 and 3.6–3.9 are all ticked, and each has observable evide
   - `reap_stale` only removes it after 60 s, because "created" is neither `exited` nor `dead`.
   - This breaks the plan's contract that the container is always removed.
 - **Fix**: Call `client.containers.create(...)` and then `container.start()` yourself, with `start()` inside the `try/finally: remove(force=True, v=True)` block. Return a start failure as `SandboxUnavailable` (or as an `error_internal` result) only after the remove. Add a fake-client unit test for it, and add `created` to the statuses `reap_stale` removes.
-- **Decision**: PENDING (pending user decision)
+- **Decision**: RESOLVED — `run_command` calls `containers.create()`, then `start()` inside the try/finally that removes the container. A failed start removes the container and raises `SandboxUnavailable`, and has a unit test. `reap_stale` also removes containers in the `created` state (463aeb2).
 
 ### F5 — The `host_overrides` guard is a denylist and allows additive weakening keys (deviation 3)
 
@@ -136,7 +138,7 @@ Manual rows 1.6, 2.4 and 3.6–3.9 are all ticked, and each has observable evide
 - **Location**: challenges/sandbox.py:143-146
 - **Detail**: The guard rejects only keys already in `SANDBOX_RUN_PROFILE` plus `command` and `detach`. `host_overrides={'privileged': True}`, `cap_add`, `volumes`, `mounts`, `devices`, `pid_mode='host'`, `ipc_mode`, `sysctls` and `ulimits` all pass through into `containers.run`. The option is documented as harness-only, but `run_command` is the public API S-01 will import, and the plan's premise is "one place decides the hardening".
 - **Fix**: Replace the denylist with an allowlist, `ALLOWED_HOST_OVERRIDES = {'cpuset_cpus'}`, rejecting everything else. Extend `test_host_overrides_cannot_weaken_profile` with `privileged` and `cap_add`.
-- **Decision**: PENDING (pending user decision)
+- **Decision**: RESOLVED — `host_overrides` is now an allowlist (`ALLOWED_HOST_OVERRIDES = {'cpuset_cpus'}`). The test covers `network_mode`, `privileged`, `cap_add`, `volumes` and `pid_mode` (463aeb2).
 
 ### F6 — The "unparsable with exit 0 means Output too large" rule widens the player-error bucket (deviation 1)
 
@@ -149,7 +151,7 @@ Manual rows 1.6, 2.4 and 3.6–3.9 are all ticked, and each has observable evide
   - Side effects: in a review probe, injected garbage lines (via F1's channel) came back as "Output too large" in 23 of 30 runs. Any future infra regression that prints non-JSON and exits 0 would also be classed as a player error. The harness would then report it as a cut candidate ("verifier rejected example") instead of an `error_internal` to investigate.
   - The deviation is recorded in `change.md` Notes but not in `plan.md`.
 - **Fix**: Accept it. Add a plan addendum under Critical Implementation Details. Once F1 is fixed, the injection case disappears. Optionally, also require that the tail does not start with `{"Correct"`, so that a whole, well-formed-looking but invalid line still becomes `error_internal`.
-- **Decision**: PENDING (pending user decision)
+- **Decision**: RESOLVED — Deviation 1 is accepted and recorded in a plan addendum. In addition, a whole stdout line that starts with `{"Correct"` but fails to parse (and is under the truncation size) maps to `error_internal` (463aeb2).
 
 ### F7 — The per-challenge p95 gate (deviation 2) is sound, but its "parallel p95" is a single sample
 
@@ -161,7 +163,7 @@ Manual rows 1.6, 2.4 and 3.6–3.9 are all ticked, and each has observable evide
   - Gating on a non-excluded cut candidate is consistent with plan §2. A challenge that meets a cut condition but is not in `excluded.yaml` means the cut list is wrong, so the run should fail.
   - However, `par_duration` is the single parallel run, but `cut_reasons` labels it "parallel p95". One noisy sample over 4.0 s fails the run, whereas the sequential rule uses a real p95.
 - **Fix**: Accept it. Rename the label to "parallel duration", note it in the plan addendum, and (optionally) require the parallel breach to reproduce with `--only <slug>` before cutting, which matches manual step 3.6.
-- **Decision**: PENDING (pending user decision)
+- **Decision**: RESOLVED — Deviation 2 is accepted and recorded in a plan addendum. The per-challenge label was renamed from "parallel p95" to "parallel duration" (463aeb2).
 
 ### F8 — Unplanned but benign additions, and the Printable expectation, are not reflected in the plan
 
@@ -174,7 +176,7 @@ Manual rows 1.6, 2.4 and 3.6–3.9 are all ticked, and each has observable evide
   - The plan said "the 20 static-output challenges are expected to accept" a printed answer. The actual result is 12 `yes` and 10 `long` (over 300 characters). `verification.md` explains this correctly.
   - The PRD FR-004 edit is the rewording the plan refers to. It is expected.
 - **Fix**: Add a short plan addendum listing these files and the 12+10 Printable outcome, so future reviews use the right baseline.
-- **Decision**: PENDING (pending user decision)
+- **Decision**: RESOLVED — A plan addendum lists `verify.py`, `fakes.py`, `test_verify.py`, `Challenge.expected_lines`, `catalog.excluded()`, `randomized_slugs` (parsed from Go `rndTable`), and the Printable outcome of 12 yes + 10 long.
 
 ### F9 — Carry-overs for S-01 from the runner's current shape
 
@@ -188,4 +190,4 @@ Manual rows 1.6, 2.4 and 3.6–3.9 are all ticked, and each has observable evide
   - (c) `images.get()` runs on every command, adding one extra Docker API round trip per run. Caching a positive result is enough.
   - (d) `catalog.get(slug)` also returns excluded challenges. S-01 must serve only from `main_set()`.
 - **Fix**: Copy (a)–(d) into the S-01 plan's constraints. No change needed in F-01, except (c) if it is cheap.
-- **Decision**: PENDING (pending user decision)
+- **Decision**: RESOLVED — Carry-overs (a)–(d) are recorded in the `change.md` notes and under S-01 in `context/foundation/roadmap.md`.
