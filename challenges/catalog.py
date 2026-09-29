@@ -82,7 +82,31 @@ def main_set() -> list[Challenge]:
 
 
 def get(slug: str) -> Challenge:
+    """Look up any main-set challenge. Harness only; includes excluded challenges.
+
+    The game must use ``playable`` / ``first_playable`` / ``next_playable``.
+    """
     for c in all_main_set():
         if c.slug == slug:
             return c
     raise KeyError(slug)
+
+
+def playable(slug: str | None) -> Challenge | None:
+    """The playable challenge ``slug``, or ``None`` if it is unknown or excluded."""
+    return next((c for c in main_set() if c.slug == slug), None)
+
+
+def first_playable() -> Challenge | None:
+    playable_set = main_set()
+    return playable_set[0] if playable_set else None
+
+
+def next_playable(slug: str) -> Challenge | None:
+    """The next playable challenge after ``slug`` in file order (``slug`` may itself be cut)."""
+    cut = excluded()
+    order = all_main_set()
+    idx = next((i for i, c in enumerate(order) if c.slug == slug), None)
+    if idx is None:
+        return None
+    return next((c for c in order[idx + 1:] if c.slug not in cut), None)

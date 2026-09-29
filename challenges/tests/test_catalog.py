@@ -57,3 +57,38 @@ class CatalogTests(SimpleTestCase):
     def test_get_unknown_slug_raises_key_error(self):
         with self.assertRaises(KeyError):
             catalog.get('nope')
+
+
+class PlayableLookupTests(SimpleTestCase):
+    def setUp(self):
+        catalog.clear_cache()
+        self.addCleanup(catalog.clear_cache)
+
+    def _with_cut(self, text):
+        ctx = override_settings(CHALLENGES_EXCLUDED=_write_excluded(text))
+        ctx.enable()
+        self.addCleanup(ctx.disable)
+        catalog.clear_cache()
+
+    def test_playable_never_returns_an_excluded_slug(self):
+        self._with_cut('current_working_directory: "cut"\n')
+        self.assertIsNone(catalog.playable('current_working_directory'))
+        self.assertEqual(catalog.playable('hello_world').slug, 'hello_world')
+        self.assertIsNone(catalog.playable('no_such_slug'))
+
+    def test_first_playable_skips_excluded_head(self):
+        self.assertEqual(catalog.first_playable().slug, 'hello_world')
+        self._with_cut('hello_world: "cut"\n')
+        self.assertEqual(catalog.first_playable().slug, 'current_working_directory')
+
+    def test_next_playable_skips_excluded_and_works_from_a_cut_slug(self):
+        order = [c.slug for c in catalog.all_main_set()]
+        self._with_cut(f'{order[1]}: "cut"\n{order[2]}: "cut"\n')
+        self.assertEqual(catalog.next_playable(order[0]).slug, order[3])
+        self.assertEqual(catalog.next_playable(order[1]).slug, order[3])
+
+    def test_next_playable_returns_none_at_end(self):
+        order = [c.slug for c in catalog.all_main_set()]
+        self.assertIsNone(catalog.next_playable(order[-1]))
+        self._with_cut(f'{order[-1]}: "cut"\n')
+        self.assertIsNone(catalog.next_playable(order[-2]))

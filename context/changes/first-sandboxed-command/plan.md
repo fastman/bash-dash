@@ -517,15 +517,15 @@ Answer the roadmap unknown ("~1 s at ~15 concurrent players?") with numbers from
 
 #### Automated
 
-- [ ] 1.1 All tests pass: `uv run python manage.py test challenges`
-- [ ] 1.2 Django checks pass: `uv run python manage.py check`
-- [ ] 1.3 New unit tests for reap min-age, reap_stale_once, pool size, image-check cache, playable lookups pass
-- [ ] 1.4 Harness unchanged: `verify_challenges --only hello_world --skip-abuse` exits 0, no leaked containers
-- [ ] 1.5 WAL is active (`PRAGMA journal_mode` returns `wal`)
+- [x] 1.1 All tests pass: `uv run python manage.py test challenges`
+- [x] 1.2 Django checks pass: `uv run python manage.py check`
+- [x] 1.3 New unit tests for reap min-age, reap_stale_once, pool size, image-check cache, playable lookups pass
+- [x] 1.4 Harness unchanged: `verify_challenges --only hello_world --skip-abuse` exits 0, no leaked containers
+- [x] 1.5 WAL is active (`PRAGMA journal_mode` returns `wal`)
 
 #### Manual
 
-- [ ] 1.6 Review `reap_stale` diff: containers younger than `min_age_s` never removed
+- [x] 1.6 Review `reap_stale` diff: containers younger than `min_age_s` never removed
 
 ### Phase 2: Game domain (models + service)
 

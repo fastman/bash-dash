@@ -1,7 +1,7 @@
 ---
 change_id: first-sandboxed-command
 title: First sandboxed command
-status: plan_reviewed
+status: implementing
 created: 2026-09-29
 updated: 2026-09-29
 archived_at: null
