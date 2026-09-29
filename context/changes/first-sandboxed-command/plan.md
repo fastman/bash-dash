@@ -517,28 +517,28 @@ Answer the roadmap unknown ("~1 s at ~15 concurrent players?") with numbers from
 
 #### Automated
 
-- [x] 1.1 All tests pass: `uv run python manage.py test challenges`
-- [x] 1.2 Django checks pass: `uv run python manage.py check`
-- [x] 1.3 New unit tests for reap min-age, reap_stale_once, pool size, image-check cache, playable lookups pass
-- [x] 1.4 Harness unchanged: `verify_challenges --only hello_world --skip-abuse` exits 0, no leaked containers
-- [x] 1.5 WAL is active (`PRAGMA journal_mode` returns `wal`)
+- [x] 1.1 All tests pass: `uv run python manage.py test challenges` — 8ab3a0f
+- [x] 1.2 Django checks pass: `uv run python manage.py check` — 8ab3a0f
+- [x] 1.3 New unit tests for reap min-age, reap_stale_once, pool size, image-check cache, playable lookups pass — 8ab3a0f
+- [x] 1.4 Harness unchanged: `verify_challenges --only hello_world --skip-abuse` exits 0, no leaked containers — 8ab3a0f
+- [x] 1.5 WAL is active (`PRAGMA journal_mode` returns `wal`) — 8ab3a0f
 
 #### Manual
 
-- [x] 1.6 Review `reap_stale` diff: containers younger than `min_age_s` never removed
+- [x] 1.6 Review `reap_stale` diff: containers younger than `min_age_s` never removed — 8ab3a0f
 
 ### Phase 2: Game domain (models + service)
 
 #### Automated
 
-- [ ] 2.1 Migration applies cleanly: `uv run python manage.py migrate`
-- [ ] 2.2 No missing migrations: `makemigrations --check --dry-run`
-- [ ] 2.3 Game service unit tests pass: `uv run python manage.py test game`
-- [ ] 2.4 Full suite passes: `uv run python manage.py test`
+- [x] 2.1 Migration applies cleanly: `uv run python manage.py migrate`
+- [x] 2.2 No missing migrations: `makemigrations --check --dry-run`
+- [x] 2.3 Game service unit tests pass: `uv run python manage.py test game`
+- [x] 2.4 Full suite passes: `uv run python manage.py test`
 
 #### Manual
 
-- [ ] 2.5 Shell: `start_game` + `submit_command` with the hello_world answer against the real sandbox advances to `current_working_directory`
+- [x] 2.5 Shell: `start_game` + `submit_command` with the hello_world answer against the real sandbox advances to `current_working_directory`
 
 ### Phase 3: Player UI
 
