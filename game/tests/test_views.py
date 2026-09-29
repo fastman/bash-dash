@@ -2,11 +2,14 @@ import json
 import re
 from unittest import mock
 
+import docker.errors
+import requests.exceptions
+
 from django.test import Client, TestCase
 from django.urls import reverse
 
 from challenges import catalog, sandbox
-from game import services
+from game import services, views
 from game.models import GameSession
 from game.templatetags.game_text import render_description
 from game.tests.fakes import result
@@ -180,6 +183,54 @@ class CommandJsonTests(ViewTestCase):
         resp = self.client.post(reverse('game:command'), 'not json', content_type='application/json')
         self.assertEqual(resp.status_code, 400)
 
+
+    def test_oversized_body_is_rejected_before_parsing(self):
+        body = json.dumps({'command': 'x', 'pad': 'y' * 5000})
+        resp = self.client.post(reverse('game:command'), body, content_type='application/json')
+        self.assertEqual(resp.status_code, 413)
+        self.assertEqual(resp.json()['status'], 'bad_request')
+        self.run_command.assert_not_called()
+
+    def test_deeply_nested_json_is_400_not_500(self):
+        # The size cap already stops this; lift it to prove the parser guard on its own.
+        with mock.patch.object(views, 'MAX_BODY_BYTES', 10 ** 6):
+            resp = self.client.post(reverse('game:command'), '[' * 200_000, content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()['status'], 'bad_request')
+
+    def test_max_length_command_is_accepted(self):
+        resp = self.command('\u00e9' * sandbox.MAX_COMMAND_CHARS)  # 300 two-byte chars, JSON-escaped
+        self.assertEqual(resp.status_code, 200)
+
+    def test_lone_surrogate_in_command_is_bad_request_not_too_long(self):
+        body = '{"command": "echo \\ud800"}'
+        resp = self.client.post(reverse('game:command'), body, content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()['status'], 'bad_request')
+        self.run_command.assert_not_called()
+
+
+class DockerDownTests(TestCase):
+    """The real ``run_command``: only the Docker client fails, as when the daemon is down."""
+
+    def setUp(self):
+        catalog.clear_cache()
+        services._reset_semaphore()
+        reap = mock.patch.object(sandbox, 'reap_stale_once')
+        reap.start()
+        self.addCleanup(reap.stop)
+        self.client.post(reverse('game:start'), {'nick': 'neo'})
+
+    def test_daemon_unreachable_returns_json_503_and_is_not_counted(self):
+        for exc in (docker.errors.DockerException('no socket'), requests.exceptions.ConnectionError('gone')):
+            with self.subTest(exc=type(exc).__name__), \
+                    mock.patch.object(sandbox, '_get_client', side_effect=exc):
+                resp = self.client.post(reverse('game:command'), json.dumps({'command': 'ls'}),
+                                        content_type='application/json')
+                self.assertEqual(resp.status_code, 503)
+                self.assertEqual(resp.json()['status'], 'unavailable')
+        game = GameSession.objects.get(pk=self.client.session['game_id'])
+        self.assertEqual(game.attempts, 0)
 
 class CsrfTests(ViewTestCase):
     def test_command_post_requires_csrf_token(self):

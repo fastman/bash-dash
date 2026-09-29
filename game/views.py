@@ -31,6 +31,11 @@ MESSAGES = {
     services.BUSY: 'Server busy, try again in a moment.',
     services.INTERNAL: 'Internal error, try again.',
 }
+# A valid body is at most ~1.2 KB ({"command": <300 chars, JSON-escaped>}); anything
+# bigger is rejected before parsing, which also bounds json's recursion depth.
+MAX_BODY_BYTES = 4096
+BAD_REQUEST = {'status': 'bad_request', 'message': 'Malformed request.'}
+
 CORRECT = 'Correct!'
 TIMED_OUT = 'Timed out (5 s limit)'
 INCORRECT = 'Incorrect.'
@@ -116,13 +121,16 @@ def command(request):
     game = _session_game(request)
     if game is None:
         return JsonResponse({'status': 'no_game', 'message': 'No game in progress.'}, status=403)
+    if len(request.body) > MAX_BODY_BYTES:
+        return JsonResponse({**BAD_REQUEST, 'message': 'Request too large.'}, status=413)
     try:
         body = json.loads(request.body)
         cmd = body['command']
         if not isinstance(cmd, str):
             raise TypeError
-    except (ValueError, KeyError, TypeError):
-        return JsonResponse({'status': 'bad_request', 'message': 'Malformed request.'}, status=400)
+        cmd.encode()  # lone surrogates: UnicodeEncodeError (a ValueError), not "too long" later
+    except (ValueError, KeyError, TypeError, RecursionError):
+        return JsonResponse(BAD_REQUEST, status=400)
 
     outcome = services.submit_command(game.pk, cmd)
     game = outcome.game
