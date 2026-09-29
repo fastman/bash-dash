@@ -1,0 +1,16 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}bash-dash{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'game/game.css' %}">
+</head>
+<body>
+  <main>
+    <header class="brand">$ bash-dash</header>
+    {% block content %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

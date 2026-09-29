@@ -531,30 +531,30 @@ Answer the roadmap unknown ("~1 s at ~15 concurrent players?") with numbers from
 
 #### Automated
 
-- [x] 2.1 Migration applies cleanly: `uv run python manage.py migrate`
-- [x] 2.2 No missing migrations: `makemigrations --check --dry-run`
-- [x] 2.3 Game service unit tests pass: `uv run python manage.py test game`
-- [x] 2.4 Full suite passes: `uv run python manage.py test`
+- [x] 2.1 Migration applies cleanly: `uv run python manage.py migrate` — da1b7e4
+- [x] 2.2 No missing migrations: `makemigrations --check --dry-run` — da1b7e4
+- [x] 2.3 Game service unit tests pass: `uv run python manage.py test game` — da1b7e4
+- [x] 2.4 Full suite passes: `uv run python manage.py test` — da1b7e4
 
 #### Manual
 
-- [x] 2.5 Shell: `start_game` + `submit_command` with the hello_world answer against the real sandbox advances to `current_working_directory`
+- [x] 2.5 Shell: `start_game` + `submit_command` with the hello_world answer against the real sandbox advances to `current_working_directory` — da1b7e4
 
 ### Phase 3: Player UI
 
 #### Automated
 
-- [ ] 3.1 View tests pass (redirects, JSON contract per status, CSRF, reload restores last attempt)
-- [ ] 3.2 Description filter escapes HTML and renders backticks/fences
-- [ ] 3.3 No answer links in rendered pages
-- [ ] 3.4 Full suite passes: `uv run python manage.py test`
-- [ ] 3.5 Checks pass: `uv run python manage.py check`
+- [x] 3.1 View tests pass (redirects, JSON contract per status, CSRF, reload restores last attempt)
+- [x] 3.2 Description filter escapes HTML and renders backticks/fences
+- [x] 3.3 No answer links in rendered pages
+- [x] 3.4 Full suite passes: `uv run python manage.py test`
+- [x] 3.5 Checks pass: `uv run python manage.py check`
 
 #### Manual
 
 - [ ] 3.6 Play first 5 challenges at phone width: output, verdict, advance and attempts counter behave
-- [ ] 3.7 Reload mid-game restores challenge, counters and last output
-- [ ] 3.8 Fork bomb and `sleep 60` return within ~6 s as timed out and are counted
+- [x] 3.7 Reload mid-game restores challenge, counters and last output
+- [x] 3.8 Fork bomb and `sleep 60` return within ~6 s as timed out and are counted
 - [ ] 3.9 Large output scrolls inside the output box
 - [ ] 3.10 Sandbox unavailable shows retry message, attempt not counted, command kept
 
