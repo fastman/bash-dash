@@ -96,7 +96,7 @@ Numeracja jest stabilna. FR-009, FR-014 i FR-015 usunięto w rundzie sokratejski
 - FR-003: Gracz może rozwiązywać zadania z zestawu głównego w stałej kolejności, bez pomijania. Priority: must-have
   > Socrates: Rozważono „utknięcie na jednym zadaniu” i „niepewną kolejność trudności”.
   > Brak kontrargumentu; FR stoi jak jest.
-- FR-004: Gracz może wpisać komendę bash i zobaczyć jej wyjście oraz informację, czy rozwiązała zadanie. Weryfikacja odrzuca samo wypisanie oczekiwanego wyniku. Priority: must-have
+- FR-004: Gracz może wpisać komendę bash i zobaczyć jej wyjście oraz informację, czy rozwiązała zadanie. W zadaniach z losowo zmienianymi danymi lub dodatkowym sprawdzeniem weryfikacja odrzuca samo wypisanie oczekiwanego wyniku. Priority: must-have
   > Socrates: Kontrargument: „opóźnienie ok. 1 s na komendę przy tłoku zjada 5-minutowy
   > limit”. Rozstrzygnięcie: ryzyko akceptowane przy spodziewanym ruchu.
 - FR-005: Gracz może wysłać dowolną liczbę komend. Każda liczy się jako podejście. Priority: must-have
@@ -166,8 +166,9 @@ rozwiązania (rosnąco).
 
 Wejścia: sekwencja komend wysłanych przez gracza w ciągu 5 minut od startu sesji (liczonych od
 momentu kliknięcia „Start”, niezależnie od urządzenia gracza) oraz wynik weryfikacji każdej z nich. Zadanie uznaje się za rozwiązane tylko wtedy, gdy
-komenda daje oczekiwany wynik, także po ponownym wykonaniu na losowo zmienionych danych. Dzięki
-temu samo wypisanie oczekiwanego wyniku nie przechodzi. Komendy wysłane po czasie nie wpływają na
+komenda daje oczekiwany wynik, a w zadaniach z losowo zmienianymi danymi także po ponownym
+wykonaniu na zmienionych danych. W tych zadaniach samo wypisanie oczekiwanego wyniku nie
+przechodzi; w zadaniach o stałym wyniku jest to akceptowane (brak anti-cheatu, zob. Non-Goals). Komendy wysłane po czasie nie wpływają na
 wynik.
 
 Wyjście: miejsce w rankingu. Gracz widzi je na ekranie podsumowania, a obsługa na ekranie przy
