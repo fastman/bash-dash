@@ -58,7 +58,8 @@ class ChallengeReportTests(SimpleTestCase):
         reasons = self.report([res(duration=4.5)] * 3).cut_reasons()
         self.assertTrue(any('sequential p95 4.50s' in r for r in reasons), reasons)
         reasons = self.report([res()], parallel=res(duration=4.2)).cut_reasons()
-        self.assertTrue(any('parallel p95 4.20s' in r for r in reasons), reasons)
+        self.assertTrue(any('parallel duration 4.20s' in r for r in reasons), reasons)
+        self.assertFalse(any('parallel p95' in r for r in reasons), reasons)
 
     def test_accepted_expected_failure_cuts(self):
         r = self.report([res()], ef={'echo 0': res(correct=True)})
@@ -102,11 +103,15 @@ class HostOverridesTests(SimpleTestCase):
         before = dict(sandbox.SANDBOX_RUN_PROFILE)
         sandbox.run_command(catalog.get('hello_world'), 'echo', client=client,
                             host_overrides={'cpuset_cpus': '0-1'})
-        self.assertEqual(client.containers.run_calls[0]['cpuset_cpus'], '0-1')
+        self.assertEqual(client.containers.create_calls[0]['cpuset_cpus'], '0-1')
         self.assertEqual(sandbox.SANDBOX_RUN_PROFILE, before)
 
     def test_host_overrides_cannot_weaken_profile(self):
-        client = FakeClient(FakeContainer(logs=runcmd_json(Correct=True)))
-        with self.assertRaises(ValueError):
-            sandbox.run_command(catalog.get('hello_world'), 'echo', client=client,
-                                host_overrides={'network_mode': 'bridge'})
+        # Allowlist: only cpuset_cpus. Replacing or *adding* anything else is refused.
+        for override in ({'network_mode': 'bridge'}, {'privileged': True}, {'cap_add': ['SYS_ADMIN']},
+                         {'volumes': {'/': {'bind': '/host'}}}, {'pid_mode': 'host'}):
+            client = FakeClient(FakeContainer(logs=runcmd_json(Correct=True)))
+            with self.assertRaises(ValueError, msg=override):
+                sandbox.run_command(catalog.get('hello_world'), 'echo', client=client,
+                                    host_overrides=override)
+            self.assertEqual(client.containers.create_calls, [])

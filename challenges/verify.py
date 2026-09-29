@@ -110,7 +110,7 @@ class ChallengeReport:
         if self.seq_p95 > P95_LIMIT_S:
             reasons.append(f'sequential p95 {self.seq_p95:.2f}s > {P95_LIMIT_S:.1f}s')
         if self.par_duration > P95_LIMIT_S:
-            reasons.append(f'parallel p95 {self.par_duration:.2f}s > {P95_LIMIT_S:.1f}s')
+            reasons.append(f'parallel duration {self.par_duration:.2f}s > {P95_LIMIT_S:.1f}s')
         reasons.extend(f'expected failure accepted: {cmd!r}' for cmd in self.accepted_expected_failures)
         return reasons
 
@@ -128,7 +128,7 @@ def gate_failures(reports: list[ChallengeReport], *, abuse_failures: list[str], 
         for cmd in r.accepted_expected_failures:
             failures.append(f'{r.slug}: expected failure accepted: {cmd!r}')
         failures.extend(f'{r.slug}: cut candidate: {reason}'
-                        for reason in r.cut_reasons() if 'p95' in reason)
+                        for reason in r.cut_reasons() if 'p95' in reason or 'duration' in reason)
     seq = percentile([x.duration_s for r in gating for x in r.sequential], 95)
     par = percentile([r.par_duration for r in gating if r.parallel], 95)
     if seq > P95_LIMIT_S:

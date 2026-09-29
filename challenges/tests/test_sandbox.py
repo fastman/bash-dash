@@ -11,6 +11,7 @@ from challenges.tests.fakes import FakeClient, FakeContainer, aged, runcmd_json
 
 MEMORY_ERROR = 'Command used too much memory or output'
 TOO_LARGE_ERROR = 'Output too large (limit about 1 MB)'
+TAMPER_ERROR = 'Command interfered with the sandbox output'
 
 
 class RunCommandTests(SimpleTestCase):
@@ -22,7 +23,7 @@ class RunCommandTests(SimpleTestCase):
         return sandbox.run_command(self.ch, command, client=client), client
 
     def test_parses_runcmd_json_into_result(self):
-        c = FakeContainer(logs=b'noise\n' + runcmd_json(Correct=True, Output='hello world\n', ExitCode=0))
+        c = FakeContainer(logs=runcmd_json(Correct=True, Output='hello world\n', ExitCode=0))
         result, _ = self.run_with(c)
         self.assertIsInstance(result, sandbox.SandboxResult)
         self.assertTrue(result.correct)
@@ -33,6 +34,33 @@ class RunCommandTests(SimpleTestCase):
         self.assertFalse(result.timed_out)
         self.assertGreaterEqual(result.duration_s, 0)
         self.assertEqual(c.removed_with, {'force': True, 'v': True})
+
+    def test_extra_stdout_line_is_never_correct(self):
+        # A player writing to runcmd's stdout (/proc/1/fd/1) must not forge a verdict,
+        # whether the forged line comes before or after runcmd's own JSON.
+        forged = runcmd_json(Correct=True, Output='pwn')
+        for logs in (runcmd_json(Correct=False) + forged, forged + runcmd_json(Correct=False),
+                     b'noise\n' + forged):
+            c = FakeContainer(logs=logs)
+            result, _ = self.run_with(c)
+            self.assertFalse(result.correct, logs)
+            self.assertEqual(result.error, TAMPER_ERROR)
+            self.assertEqual(result.error_internal, '')
+            self.assertEqual(c.removed_with, {'force': True, 'v': True})
+
+    def test_whole_but_invalid_runcmd_line_is_internal_error(self):
+        c = FakeContainer(logs=b'{"Correct":true,"Output":"x"\n', exit_code=0)
+        result, _ = self.run_with(c)
+        self.assertFalse(result.correct)
+        self.assertEqual(result.error, '')
+        self.assertTrue(result.error_internal)
+
+    def test_entrypoint_failures_are_internal_errors_with_reason(self):
+        for status, needle in ((64, 'usage'), (65, 'fixture')):
+            c = FakeContainer(logs=b'', exit_code=status)
+            result, _ = self.run_with(c)
+            self.assertFalse(result.correct)
+            self.assertIn(needle, result.error_internal)
 
     def test_incorrect_answer_carries_error(self):
         c = FakeContainer(logs=runcmd_json(Correct=False, Error='Test failed', ExitCode=1))
@@ -77,7 +105,7 @@ class RunCommandTests(SimpleTestCase):
         self.assertEqual(result.error_internal, '')
 
     def test_other_unparsable_output_is_internal_error(self):
-        c = FakeContainer(logs=b'sandbox-entry: missing fixture dir\n', exit_code=3)
+        c = FakeContainer(logs=b'panic: boom\n', exit_code=2)
         result, _ = self.run_with(c)
         self.assertFalse(result.correct)
         self.assertEqual(result.error, '')
@@ -112,6 +140,12 @@ class RunCommandTests(SimpleTestCase):
         self.assertEqual(len(result.output), sandbox.MAX_OUTPUT_CHARS)
         self.assertEqual(sandbox.MAX_OUTPUT_CHARS, 64 * 1024)
 
+    def test_failed_start_removes_container_and_raises_unavailable(self):
+        c = FakeContainer(start_error=docker.errors.APIError('invalid cpuset'))
+        with self.assertRaises(sandbox.SandboxUnavailable):
+            self.run_with(c)
+        self.assertEqual(c.removed_with, {'force': True, 'v': True})
+
     def test_missing_image_raises_sandbox_unavailable(self):
         with self.assertRaises(sandbox.SandboxUnavailable):
             self.run_with(FakeContainer(), image_present=False)
@@ -132,9 +166,9 @@ class RunCommandTests(SimpleTestCase):
         cmd = "awk '{s+=$1} END {print s}' *"
         client = FakeClient(FakeContainer(logs=runcmd_json()))
         sandbox.run_command(ch, cmd, client=client)
-        call = client.containers.run_calls[0]
+        call = client.containers.create_calls[0]
         self.assertEqual(call['command'], [ch.dir, ch.slug, base64.b64encode(cmd.encode()).decode()])
-        self.assertTrue(call['detach'])
+        self.assertTrue(client.containers.container.started)
         self.assertNotIn('auto_remove', call)
         for key, value in sandbox.SANDBOX_RUN_PROFILE.items():
             self.assertEqual(call[key], value, key)
@@ -180,11 +214,13 @@ class LazyClientTests(SimpleTestCase):
 class ReapStaleTests(SimpleTestCase):
     def test_removes_only_exited_or_old_labelled_containers(self):
         exited = FakeContainer(status='exited', created=aged(5))
+        never_started = FakeContainer(status='created', created=aged(5))
         old_running = FakeContainer(status='running', created=aged(120))
         fresh_running = FakeContainer(status='running', created=aged(5))
-        client = FakeClient(listed=[exited, old_running, fresh_running])
+        client = FakeClient(listed=[exited, never_started, old_running, fresh_running])
         removed = sandbox.reap_stale(max_age_s=60, client=client)
-        self.assertEqual(removed, 2)
+        self.assertEqual(removed, 3)
+        self.assertEqual(never_started.removed_with, {'force': True, 'v': True})
         self.assertEqual(exited.removed_with, {'force': True, 'v': True})
         self.assertEqual(old_running.removed_with, {'force': True, 'v': True})
         self.assertIsNone(fresh_running.removed_with)

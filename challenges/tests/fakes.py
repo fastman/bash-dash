@@ -15,12 +15,14 @@ def runcmd_json(**fields) -> bytes:
 
 class FakeContainer:
     def __init__(self, *, logs=b'', exit_code=0, oom_killed=False, wait_timeout=False,
-                 status='exited', created=None, logs_error=None):
+                 status='exited', created=None, logs_error=None, start_error=None):
         self._logs = logs
         self.exit_code = exit_code
         self.oom_killed = oom_killed
         self.wait_timeout = wait_timeout
         self.logs_error = logs_error
+        self.start_error = start_error
+        self.started = False
         self.status = status
         created = created or datetime.now(timezone.utc)
         self.attrs = {
@@ -30,6 +32,11 @@ class FakeContainer:
         self.killed = False
         self.removed_with = None
         self.wait_calls = []
+
+    def start(self):
+        if self.start_error:
+            raise self.start_error
+        self.started = True
 
     def wait(self, timeout=None):
         self.wait_calls.append(timeout)
@@ -71,14 +78,17 @@ class FakeContainers:
         self.container = container
         self.run_error = run_error
         self.listed = list(listed)
-        self.run_calls = []
+        self.create_calls = []
         self.list_calls = []
 
-    def run(self, image, command=None, **kwargs):
-        self.run_calls.append({'image': image, 'command': command, **kwargs})
+    def create(self, image, command=None, **kwargs):
+        self.create_calls.append({'image': image, 'command': command, **kwargs})
         if self.run_error:
             raise self.run_error
         return self.container
+
+    def run(self, *args, **kwargs):
+        raise AssertionError('use create() + start() so a failed start can be cleaned up')
 
     def list(self, **kwargs):
         self.list_calls.append(kwargs)
