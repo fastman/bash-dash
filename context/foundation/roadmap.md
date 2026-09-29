@@ -112,6 +112,11 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:**
   - Czy wykonywanie komendy w osobnym kontenerze mieści się w ok. 1 s przy kilkunastu równoczesnych graczach? — Owner: team. Block: no (PRD akceptuje opóźnienie; do zmierzenia w tym kawałku).
+- **Carry-overs z F-01 (przegląd implementacji, F9):**
+  - (a) `reap_stale()` przy starcie ściga się z trwającymi uruchomieniami, jeśli startuje go wiele workerów lub procesów — wywoływać raz (jeden hook startowy lub blokada), nie w każdym workerze.
+  - (b) Pula połączeń docker-py ma 10 połączeń; ponad ok. 10 równoczesnych `run_command` na wspólnym kliencie czeka w kolejce — dobrać pulę lub limit współbieżności do liczby workerów.
+  - (c) `run_command` wywołuje `images.get` przy każdej komendzie; można to zbuforować po pierwszym sukcesie (obraz zmienia się tylko przy wdrożeniu).
+  - (d) `catalog.get(slug)` zwraca też zadania wycięte — S-01 musi serwować zadania z `catalog.main_set()`.
 - **Risk:** north star i największa niewiadoma; idzie tak wcześnie, jak pozwala F-01, żeby problemy z integracją lub wydajnością sandboxa wyszły w pierwszym dniu, a nie w ostatnim.
 - **Status:** proposed
 
