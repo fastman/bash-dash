@@ -38,7 +38,7 @@ techniczna (integracja, utwardzenie, ok. 6 s na komendę).
 
 | ID   | Change ID                     | Outcome (user can …)                                                                                     | Prerequisites | PRD refs                                    | Status   |
 | ---- | ----------------------------- | -------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------- | -------- |
-| F-01 | sandbox-image-and-task-cut    | (foundation) obraz sandboxa zbudowany, zadania główne przetestowane pod utwardzeniem, niedziałające wycięte | —             | NFR (izolacja komend), FR-004               | ready    |
+| F-01 | sandbox-image-and-task-cut    | (foundation) obraz sandboxa zbudowany, zadania główne przetestowane pod utwardzeniem, niedziałające wycięte | —             | NFR (izolacja komend), FR-004               | done     |
 | F-02 | event-vm-deploy               | (foundation) aplikacja działa na docelowej VM pod HTTPS, z kopią bazy poza VM i przećwiczonym odtworzeniem | —             | NFR (trwałość ~5 min), NFR (mobilna przeglądarka) | blocked  |
 | S-01 | first-sandboxed-command       | gracz podaje nick, startuje i rozwiązuje zadania po kolei komendami wykonywanymi w sandboxie             | F-01          | US-01, FR-002, FR-003, FR-004, FR-005       | proposed |
 | S-02 | server-side-time-limit        | gracz widzi pozostały czas, po odświeżeniu wraca do tej samej sesji, a gra kończy się po 5 min lub po wszystkich zadaniach | S-01          | US-01, FR-006, FR-007                       | proposed |
@@ -84,7 +84,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Architektura docelowej VM (amd64 czy arm64), pod którą budujemy obraz? — Owner: user. Block: no (przy przycięciu zakresu wystarczy jedna; można zacząć od lokalnej).
 - **Risk:** idzie pierwsze, bo S-01 (north star) bez niego nie ruszy, a test pod utwardzeniem może wyciąć część zadań; gdyby wyszło to dopiero przy S-01, zmieniałoby zakres gry w ostatniej chwili.
-- **Status:** ready
+- **Status:** done
 
 ### F-02: Wdrożenie na VM wydarzenia z kopią bazy
 
@@ -225,3 +225,5 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Twarda blokada powtórnej gry** — Why parked: PRD §Non-Goals.
 
 ## Done
+
+- **F-01: (foundation) obraz sandboxa z zestawem głównym zadań buduje się z repo; wzorcowe rozwiązania wszystkich zadań zostały uruchomione pod docelowym utwardzeniem, a zadania, które nie przechodzą, są wycięte z listy.** — Archived 2026-09-29 → `context/archive/2026-09-29-sandbox-image-and-task-cut/`. Lesson: —.

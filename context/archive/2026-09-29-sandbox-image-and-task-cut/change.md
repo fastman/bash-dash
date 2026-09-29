@@ -1,10 +1,10 @@
 ---
 change_id: sandbox-image-and-task-cut
 title: Sandbox image and task cut
-status: impl_reviewed
+status: archived
 created: 2026-09-29
 updated: 2026-09-29
-archived_at: null
+archived_at: 2026-09-29T13:48:19Z
 ---
 
 ## Notes
