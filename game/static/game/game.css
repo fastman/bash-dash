@@ -95,6 +95,7 @@ button:disabled, input:disabled { opacity: 0.6; }
 }
 
 .counters strong { color: var(--fg); }
+#timer.low { color: var(--warn); }
 
 .index { color: var(--muted); margin: 8px 0 0; font-family: var(--mono); }
 

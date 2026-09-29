@@ -1,4 +1,5 @@
 {% extends 'game/base.html' %}
+{% load game_text %}
 {% block content %}
 <section class="rules">
   <h1>How to play</h1>
@@ -7,7 +8,7 @@
     <li>Type a bash command. It runs in a sandbox and you see its output and whether it solved the challenge.</li>
     <li>Every command you run counts as an attempt, including <code>ls</code> and <code>cat</code>.</li>
     <li>Fewer attempts is better.</li>
-    <li>You have 5 minutes.</li>
+    <li>You have {{ duration|duration_text }}.</li>
   </ul>
 </section>
 <form method="post" action="{% url 'game:start' %}" class="start">

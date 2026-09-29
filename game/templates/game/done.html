@@ -1,7 +1,7 @@
 {% extends 'game/base.html' %}
 {% block content %}
 <section class="done">
-  <h1>Finished!</h1>
+  <h1>{% if timed_out %}Time's up!{% elif all_solved %}All challenges solved!{% else %}Finished!{% endif %}</h1>
   <p>Well played, <strong>{{ game.nick }}</strong>.</p>
   <p>Solved: <strong>{{ game.solved }} / {{ total }}</strong></p>
   <p>Attempts: <strong>{{ game.attempts }}</strong></p>

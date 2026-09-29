@@ -22,6 +22,22 @@ def _inline(text: str) -> str:
 
 
 @register.filter
+def clock(remaining_ms) -> str:
+    """Format milliseconds as m:ss, rounding up so the display hits 0:00 only at 0."""
+    seconds = -(-max(0, int(remaining_ms)) // 1000)
+    return f'{seconds // 60}:{seconds % 60:02d}'
+
+
+@register.filter
+def duration_text(seconds) -> str:
+    seconds = int(seconds)
+    if seconds % 60 == 0:
+        n = seconds // 60
+        return f'{n} minute{"" if n == 1 else "s"}'
+    return f'{seconds} seconds'
+
+
+@register.filter
 def render_description(text: str) -> str:
     parts = _FENCE.split(escape(text or ''))
     # re.split with one group alternates: text, fence body, text, ...

@@ -2,6 +2,7 @@
 
 import json
 
+from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -73,6 +74,9 @@ def _challenge_info(challenge) -> dict | None:
     }
 
 
+NO_GAME = {'status': 'no_game', 'message': 'No game in progress.'}
+
+
 def _redirect_existing(game: GameSession):
     return redirect('game:done' if game.is_finished else 'game:play')
 
@@ -82,7 +86,7 @@ def home(request):
     game = _session_game(request)
     if game:
         return _redirect_existing(game)
-    return render(request, 'game/home.html')
+    return render(request, 'game/home.html', {'duration': settings.GAME_DURATION_S})
 
 
 @require_POST
@@ -95,6 +99,7 @@ def start(request):
         game = services.start_game(nick)
     except ValueError:
         return render(request, 'game/home.html', {
+            'duration': settings.GAME_DURATION_S,
             'error': f'Enter a nick of 1-{services.NICK_MAX_CHARS} characters.', 'nick': nick})
     request.session['game_id'] = str(game.pk)
     return redirect('game:play')
@@ -122,11 +127,20 @@ def play(request):
     })
 
 
+@require_GET
+def state(request):
+    """Authoritative remaining time, for clients whose monotonic clock may have paused."""
+    game = _session_game(request)
+    if game is None:
+        return JsonResponse(NO_GAME, status=403)
+    return JsonResponse({'remaining_ms': services.remaining_ms(game), 'finished': game.is_finished})
+
+
 @require_POST
 def command(request):
     game = _session_game(request)
     if game is None:
-        return JsonResponse({'status': 'no_game', 'message': 'No game in progress.'}, status=403)
+        return JsonResponse(NO_GAME, status=403)
     if len(request.body) > MAX_BODY_BYTES:
         return JsonResponse({**BAD_REQUEST, 'message': 'Request too large.'}, status=413)
     try:
@@ -165,4 +179,10 @@ def done(request):
         return redirect('game:home')
     if not game.is_finished:
         return redirect('game:play')
-    return render(request, 'game/done.html', {'game': game, 'total': len(catalog.main_set())})
+    total = len(catalog.main_set())
+    return render(request, 'game/done.html', {
+        'game': game,
+        'total': total,
+        'timed_out': game.timed_out,
+        'all_solved': not game.timed_out and game.solved >= total,
+    })
