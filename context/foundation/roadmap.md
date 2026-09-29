@@ -165,6 +165,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Prerequisites:** S-03
 - **Parallel with:** S-04, F-02
 - **Blockers:** —
+- **Carry-overs z S-03 (przegląd implementacji, F2):** `game/views.py` `done` rozpakowuje `services.rank_of(game)` bez obsługi `None`; gdy S-05 doda filtr ukrytych nicków do rankingu, ukryty gracz przeładowujący `/done` dostanie 500 — dodać obsługę `None` w widoku i szablonie.
 - **Unknowns:**
   - Rozmiar top N, liczba ostatnich wyników i częstotliwość odświeżania (Open Question 3). — Owner: user. Block: no (rozsądne wartości domyślne, do zmiany w trakcie).
 - **Risk:** drugorzędne kryterium sukcesu (ruch przy stoisku), ale też miejsce na QR z S-06, więc musi powstać przed nim.

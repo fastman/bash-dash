@@ -1,7 +1,13 @@
+import secrets
 import uuid
 
 from django.db import models
 from django.utils import timezone
+
+
+def generate_code() -> str:
+    """A random 6-digit prize code, zero-padded."""
+    return f'{secrets.randbelow(10**6):06d}'
 
 
 class GameSession(models.Model):
@@ -9,6 +15,7 @@ class GameSession(models.Model):
 
     Finished <=> ``finished_at`` is set. ``current_slug`` None <=> nothing left to solve;
     a timed-out game keeps its ``current_slug``.
+    ``code`` is the unique 6-digit prize code shown on the summary page.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -22,6 +29,7 @@ class GameSession(models.Model):
     solved = models.PositiveIntegerField(default=0)
     last_solved_at = models.DateTimeField(null=True)
     finished_at = models.DateTimeField(null=True)
+    code = models.CharField(max_length=6, unique=True, editable=False, default=generate_code)
 
     def __str__(self):
         return f'{self.nick} ({self.id})'

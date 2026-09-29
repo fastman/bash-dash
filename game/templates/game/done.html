@@ -5,5 +5,12 @@
   <p>Well played, <strong>{{ game.nick }}</strong>.</p>
   <p>Solved: <strong>{{ game.solved }} / {{ total }}</strong></p>
   <p>Attempts: <strong>{{ game.attempts }}</strong></p>
+  <p>Place: <strong>#{{ place }} of {{ ranked_total }}</strong></p>
+  <div class="prize">
+    <p class="prize-code">{{ game.code }}</p>
+    <p>Show this code at the booth to claim your prize.</p>
+    <p>Take a screenshot so you don't lose it.</p>
+  </div>
+  <p class="muted">Your place can change as other players finish.</p>
 </section>
 {% endblock %}

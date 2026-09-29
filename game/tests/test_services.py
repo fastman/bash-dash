@@ -1,7 +1,9 @@
+import re
 import threading
 from datetime import timedelta
 from unittest import mock
 
+from django.db import IntegrityError
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
@@ -52,6 +54,94 @@ class StartGameTests(ServiceTestCase):
                 services.start_game(nick)
         services.start_game('x' * 20)  # boundary is fine
         self.assertEqual(GameSession.objects.count(), 1)
+
+
+class PrizeCodeTests(ServiceTestCase):
+    def test_started_game_has_six_digit_code(self):
+        game = self.fresh(services.start_game('neo'))
+        self.assertRegex(game.code, r'^\d{6}$')
+
+    def test_leading_zeros_are_preserved(self):
+        with mock.patch.object(services, 'generate_code', return_value='000042'):
+            game = services.start_game('neo')
+        self.assertEqual(self.fresh(game).code, '000042')
+
+    def test_collision_is_retried_and_transaction_stays_usable(self):
+        first = services.start_game('a')
+        with mock.patch.object(services, 'generate_code', side_effect=[first.code, '123456']):
+            game = services.start_game('b')
+        self.assertEqual(self.fresh(game).code, '123456')
+        self.assertEqual(GameSession.objects.count(), 2)
+
+    def test_exhausted_retries_raise_and_create_nothing(self):
+        first = services.start_game('a')
+        with mock.patch.object(services, 'generate_code', return_value=first.code):
+            with self.assertRaises(RuntimeError):
+                services.start_game('b')
+        self.assertEqual(GameSession.objects.count(), 1)
+
+    def test_duplicate_code_violates_db_constraint(self):
+        first = services.start_game('a')
+        now = timezone.now()
+        with self.assertRaises(IntegrityError):
+            GameSession.objects.create(nick='b', deadline_at=now, code=first.code)
+
+
+class RankingTests(ServiceTestCase):
+    def make(self, solved=0, attempts=0, elapsed=None, finished=True, deadline_in=300):
+        now = timezone.now()
+        start = now - timedelta(seconds=1000)
+        game = services.start_game('p')
+        GameSession.objects.filter(pk=game.pk).update(
+            solved=solved, attempts=attempts, started_at=start,
+            deadline_at=now + timedelta(seconds=deadline_in),
+            last_solved_at=start + timedelta(seconds=elapsed) if elapsed is not None else None,
+            finished_at=now - timedelta(seconds=1) if finished else None)
+        return self.fresh(game)
+
+    def place(self, game):
+        return services.rank_of(game)[0]
+
+    def test_orders_by_solved_then_attempts_then_elapsed(self):
+        a = self.make(solved=3, attempts=9, elapsed=100)
+        b = self.make(solved=2, attempts=2, elapsed=10)
+        c = self.make(solved=3, attempts=5, elapsed=300)
+        d = self.make(solved=3, attempts=5, elapsed=200)
+        self.assertEqual([self.place(g) for g in (c, d, a, b)], [2, 1, 3, 4])
+        self.assertEqual([g.pk for g in services.ranked_games()], [d.pk, c.pk, a.pk, b.pk])
+
+    def test_ties_share_a_place_and_next_is_skipped(self):
+        a = self.make(solved=2, attempts=3, elapsed=50)
+        b = self.make(solved=2, attempts=3, elapsed=50)
+        c = self.make(solved=3, attempts=3, elapsed=50)
+        d = self.make(solved=1, attempts=1, elapsed=5)
+        self.assertEqual([self.place(g) for g in (c, a, b, d)], [1, 2, 2, 4])
+
+    def test_zero_solved_games_rank_by_attempts_only(self):
+        a = self.make(attempts=4)
+        b = self.make(attempts=4)
+        c = self.make(attempts=1)
+        d = self.make(solved=1, attempts=50, elapsed=999)
+        self.assertEqual([self.place(g) for g in (d, c, a, b)], [1, 2, 3, 3])
+
+    def test_unfinished_games_are_excluded(self):
+        a = self.make(solved=1, attempts=1, elapsed=5)
+        live = self.make(solved=5, attempts=1, elapsed=5, finished=False)
+        self.assertIsNone(services.rank_of(live))
+        self.assertEqual(services.rank_of(a), (1, 1))
+
+    def test_overdue_unfinished_game_is_expired_and_counted(self):
+        a = self.make(solved=1, attempts=1, elapsed=5)
+        overdue = self.make(solved=2, attempts=2, elapsed=5, finished=False, deadline_in=-5)
+        self.assertEqual(services.rank_of(a), (2, 2))
+        self.assertTrue(self.fresh(overdue).is_finished)
+
+    def test_timed_out_and_all_solved_games_are_ranked(self):
+        timed_out = self.make(solved=1, attempts=2, elapsed=5)
+        done = self.make(solved=3, attempts=4, elapsed=5)
+        GameSession.objects.filter(pk=done.pk).update(current_slug=None)
+        self.assertEqual(services.rank_of(self.fresh(timed_out)), (2, 2))
+        self.assertEqual(services.rank_of(self.fresh(done)), (1, 2))
 
 
 class SubmitCommandTests(ServiceTestCase):

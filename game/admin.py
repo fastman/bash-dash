@@ -25,6 +25,6 @@ class AttemptInline(ReadOnlyMixin, admin.TabularInline):
 
 @admin.register(GameSession)
 class GameSessionAdmin(ReadOnlyMixin, admin.ModelAdmin):
-    list_display = ('nick', 'started_at', 'deadline_at', 'solved', 'attempts', 'finished_at')
-    search_fields = ('nick',)
+    list_display = ('nick', 'code', 'started_at', 'deadline_at', 'solved', 'attempts', 'finished_at')
+    search_fields = ('nick', 'code')
     inlines = [AttemptInline]
