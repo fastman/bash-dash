@@ -33,7 +33,7 @@ Verify: `uv run python manage.py test game challenges` is green. Then, locally, 
 - `rank_of` already covers "place" and handles unfinished games. The lookup view must treat `None` as "not ranked", not unpack it blindly (the S-03 `done` view does unpack it; that is the S-05 carry-over).
 - `django.contrib.admin.views.decorators.staff_member_required` gives password login for free. It redirects to `admin:login?next=/staff...`, so the staff page needs no login template of its own.
 - `solved > 0` ⇔ `last_solved_at IS NOT NULL` (S-03 plan). The solve time is `last_solved_at - started_at`, and it is `None` when nothing was solved.
-- `TIME_ZONE = 'UTC'` (`config/settings.py:118`). Absolute clock times would read wrong at a Polish booth, so relative times (`timesince`) are the main display. `HH:MM` appears only in the "already given" warning, rendered with Django's `localtime` (UTC unless the operator changes `TIME_ZONE`).
+- `TIME_ZONE` was `'UTC'` (`config/settings.py:118`); impl review F3 changed it to `'Europe/Warsaw'` so the `HH:MM` display is local. Absolute clock times would read wrong at a Polish booth, so relative times (`timesince`) are the main display. `HH:MM` appears only in the "already given" warning, rendered with Django's `localtime` (UTC unless the operator changes `TIME_ZONE`).
 
 ## What We're NOT Doing
 
@@ -285,7 +285,7 @@ A lookup runs one indexed `SELECT` by code, the bulk `expire_overdue` `UPDATE`, 
 
 #### Manual
 
-- [x] 1.5 Admin shows the prize-given column and filter and stays read-only — a909510
+- [ ] 1.5 Admin shows the prize-given column and filter and stays read-only — a909510
 
 ### Phase 2: Staff lookup page
 
@@ -297,7 +297,7 @@ A lookup runs one indexed `SELECT` by code, the bulk `expire_overdue` `UPDATE`, 
 
 #### Manual
 
-- [x] 2.4 Logged-out `/staff` goes to admin login and returns after login — 5174881
+- [ ] 2.4 Logged-out `/staff` goes to admin login and returns after login — 5174881
 - [ ] 2.5 Lookup form and card fit 360 px and 320 px; numeric keyboard on a real phone
-- [x] 2.6 End to end: lookup matches `/done`, prize marked, second press shows "already given" — 5174881 (verified by HTTP tests)
+- [ ] 2.6 End to end: lookup matches `/done`, prize marked, second press shows "already given" — 5174881 (verified by HTTP tests)
 - [x] 2.7 In-progress game shows "Game in progress" and no prize button — 5174881 (verified by HTTP tests)

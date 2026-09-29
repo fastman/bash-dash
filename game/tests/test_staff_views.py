@@ -41,6 +41,7 @@ class AccessTests(StaffTestCase):
             for resp in (client.get(self.lookup, {'code': CODE}), client.post(self.prize, {'code': CODE})):
                 self.assertEqual(resp.status_code, 302)
                 self.assertIn('/admin/login/', resp['Location'])
+            self.assertIn('next=/staff', client.get(self.lookup, {'code': CODE})['Location'])
         self.assertIsNone(GameSession.objects.get(code=CODE).prize_given_at)
 
     def test_post_without_csrf_token_is_forbidden(self):
@@ -76,6 +77,12 @@ class LookupTests(StaffTestCase):
         resp = self.client.get(self.lookup, {'code': CODE})
         self.assertContains(resp, 'Game in progress')
         self.assertNotContains(resp, 'Mark prize given')
+        self.assertNotContains(resp, 'not ranked')
+
+    def test_finished_game_with_no_solves_shows_dash(self):
+        self.make_game(solved=0)
+        resp = self.client.get(self.lookup, {'code': CODE})
+        self.assertContains(resp, 'Solve time: <strong>—</strong>')
 
     def test_unranked_finished_game_keeps_button(self):
         self.make_game()
@@ -89,10 +96,11 @@ class PrizeTests(StaffTestCase):
     def test_post_marks_once_and_redirects(self):
         self.make_game()
         resp = self.client.post(self.prize, {'code': CODE})
-        self.assertRedirects(resp, f'{self.lookup}?code={CODE}')
+        self.assertRedirects(resp, f'{self.lookup}?code={CODE}', fetch_redirect_response=False)
         stamp = GameSession.objects.get(code=CODE).prize_given_at
         self.assertIsNotNone(stamp)
         page = self.client.get(f'{self.lookup}?code={CODE}')
+        self.assertContains(page, 'Prize given to neo')
         self.assertContains(page, 'already given')
         self.assertNotContains(page, 'Mark prize given')
 
