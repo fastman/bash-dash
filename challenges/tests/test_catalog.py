@@ -1,16 +1,7 @@
-import tempfile
-from pathlib import Path
-
 from django.test import SimpleTestCase, override_settings
 
 from challenges import catalog
-
-
-def _write_excluded(text: str) -> Path:
-    tmp = tempfile.NamedTemporaryFile('w', suffix='.yaml', delete=False)
-    tmp.write(text)
-    tmp.close()
-    return Path(tmp.name)
+from challenges.tests.fakes import write_excluded
 
 
 class CatalogTests(SimpleTestCase):
@@ -38,7 +29,7 @@ class CatalogTests(SimpleTestCase):
             ch.slug = 'other'  # immutable
 
     def test_exclusions_are_removed_from_main_set_only(self):
-        path = _write_excluded('find_primes: "too slow"\n')
+        path = write_excluded('find_primes: "too slow"\n')
         with override_settings(CHALLENGES_EXCLUDED=path):
             catalog.clear_cache()
             slugs = [c.slug for c in catalog.main_set()]
@@ -48,7 +39,7 @@ class CatalogTests(SimpleTestCase):
             self.assertEqual(catalog.excluded(), {'find_primes': 'too slow'})
 
     def test_unknown_excluded_slug_raises(self):
-        path = _write_excluded('no_such_challenge: "typo"\n')
+        path = write_excluded('no_such_challenge: "typo"\n')
         with override_settings(CHALLENGES_EXCLUDED=path):
             catalog.clear_cache()
             with self.assertRaises(catalog.CatalogError):
@@ -65,7 +56,7 @@ class PlayableLookupTests(SimpleTestCase):
         self.addCleanup(catalog.clear_cache)
 
     def _with_cut(self, text):
-        ctx = override_settings(CHALLENGES_EXCLUDED=_write_excluded(text))
+        ctx = override_settings(CHALLENGES_EXCLUDED=write_excluded(text))
         ctx.enable()
         self.addCleanup(ctx.disable)
         catalog.clear_cache()

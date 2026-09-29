@@ -9,7 +9,7 @@ from challenges import catalog, sandbox
 from game import services
 from game.models import GameSession
 from game.templatetags.game_text import render_description
-from game.tests.test_services import result
+from game.tests.fakes import result
 
 EXTERNAL_LINK = re.compile(r'<a\s[^>]*href\s*=\s*["\']?(https?:)?//', re.I)
 

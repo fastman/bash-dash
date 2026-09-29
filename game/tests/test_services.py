@@ -4,14 +4,10 @@ from unittest import mock
 from django.test import TestCase, override_settings
 
 from challenges import catalog, sandbox
-from challenges.tests.test_catalog import _write_excluded
+from challenges.tests.fakes import write_excluded
 from game import services
 from game.models import Attempt, GameSession
-
-
-def result(correct=False, *, output='', error='', error_internal='', timed_out=False, duration_s=0.12):
-    return sandbox.SandboxResult(correct=correct, output=output, error=error, error_internal=error_internal,
-                                 exit_code=0, timed_out=timed_out, duration_s=duration_s)
+from game.tests.fakes import result
 
 
 class ServiceTestCase(TestCase):
@@ -29,7 +25,7 @@ class ServiceTestCase(TestCase):
         self.order = [c.slug for c in catalog.main_set()]
 
     def cut(self, *slugs):
-        ctx = override_settings(CHALLENGES_EXCLUDED=_write_excluded(''.join(f'{s}: "cut"\n' for s in slugs)))
+        ctx = override_settings(CHALLENGES_EXCLUDED=write_excluded(''.join(f'{s}: "cut"\n' for s in slugs)))
         ctx.enable()
         self.addCleanup(ctx.disable)
         catalog.clear_cache()

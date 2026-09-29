@@ -1,7 +1,9 @@
 """A minimal in-memory stand-in for ``docker.DockerClient`` used by unit tests."""
 
 import json
+import tempfile
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import docker.errors
 import requests.exceptions
@@ -103,3 +105,11 @@ class FakeClient:
 
 def aged(seconds: float) -> datetime:
     return datetime.now(timezone.utc) - timedelta(seconds=seconds)
+
+
+def write_excluded(text: str) -> Path:
+    """Write an ``excluded.yaml`` to a temp file (use with ``override_settings(CHALLENGES_EXCLUDED=...)``)."""
+    tmp = tempfile.NamedTemporaryFile('w', suffix='.yaml', delete=False)
+    tmp.write(text)
+    tmp.close()
+    return Path(tmp.name)

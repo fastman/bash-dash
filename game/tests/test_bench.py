@@ -8,7 +8,7 @@ from challenges import catalog, sandbox
 from game import services
 from game.management.commands import bench_game
 from game.models import GameSession
-from game.tests.test_services import result
+from game.tests.fakes import result
 
 
 class BenchGameTests(TransactionTestCase):
