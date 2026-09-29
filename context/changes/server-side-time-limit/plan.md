@@ -309,7 +309,7 @@ Show the remaining time, keep it honest across reloads and suspended or backgrou
 
 #### Manual
 
-- [ ] 1.5 With `BASHDASH_GAME_DURATION_S=30`, start a game, wait 30 s, then submit via the existing UI: the verdict says "Time's up.", the page goes to `/done`, and the admin shows `finished_at == deadline_at` with attempts unchanged
+- [x] 1.5 With `BASHDASH_GAME_DURATION_S=30`, start a game, wait 30 s, then submit via the existing UI: the verdict says "Time's up.", the page goes to `/done`, and the admin shows `finished_at == deadline_at` with attempts unchanged
 
 ### Phase 2: Countdown and end-of-game UX
 
@@ -320,11 +320,11 @@ Show the remaining time, keep it honest across reloads and suspended or backgrou
 
 #### Manual
 
-- [ ] 2.3 On a phone-width browser (Chrome Android or Safari iOS, or devtools emulation) with `BASHDASH_GAME_DURATION_S=60`, the timer counts down smoothly and turns warn-coloured at 0:30
-- [ ] 2.4 Reloading mid-game shows the same remaining time (±1 s), not a reset
-- [ ] 2.5 Backgrounding the tab or locking the phone for 20 s, then returning, shows the timer resynced with the server (within about 1 s of the true remaining time), on a real Android phone if available
-- [ ] 2.6 Changing the device clock mid-game neither extends nor shortens the countdown, and the server still ends the game on time
-- [ ] 2.7 At 0:00 the input locks, the page moves to `/done` within about 2 s, and it shows "Time's up!"
-- [ ] 2.8 A command sent in the last 1-2 s (use a slow one such as `sleep 3; ls`) still shows as counted in the admin, and the page then lands on `/done`
-- [ ] 2.9 A stale second tab of the same game, used after the deadline, gets "Time's up." and goes to `/done`
-- [ ] 2.10 Solving all challenges before time runs out shows "All challenges solved!"
+- [x] 2.3 On a phone-width browser (Chrome Android or Safari iOS, or devtools emulation) with `BASHDASH_GAME_DURATION_S=60`, the timer counts down smoothly and turns warn-coloured at 0:30
+- [x] 2.4 Reloading mid-game shows the same remaining time (±1 s), not a reset
+- [x] 2.5 Backgrounding the tab or locking the phone for 20 s, then returning, shows the timer resynced with the server (within about 1 s of the true remaining time), on a real Android phone if available
+- [x] 2.6 Changing the device clock mid-game neither extends nor shortens the countdown, and the server still ends the game on time
+- [x] 2.7 At 0:00 the input locks, the page moves to `/done` within about 2 s, and it shows "Time's up!"
+- [x] 2.8 A command sent in the last 1-2 s (use a slow one such as `sleep 3; ls`) still shows as counted in the admin, and the page then lands on `/done`
+- [x] 2.9 A stale second tab of the same game, used after the deadline, gets "Time's up." and goes to `/done`
+- [x] 2.10 Solving all challenges before time runs out shows "All challenges solved!"
