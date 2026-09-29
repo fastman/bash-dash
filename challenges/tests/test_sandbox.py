@@ -1,9 +1,11 @@
 import base64
 import importlib
+import threading
 from unittest import mock
 
 import docker
 import docker.errors
+import requests.exceptions
 from django.test import SimpleTestCase, override_settings
 
 from challenges import catalog, sandbox
@@ -154,6 +156,21 @@ class RunCommandTests(SimpleTestCase):
         with self.assertRaises(sandbox.SandboxUnavailable):
             self.run_with(None, run_error=docker.errors.DockerException('daemon down'))
 
+    def test_client_creation_failure_raises_sandbox_unavailable(self):
+        with mock.patch.object(sandbox, '_get_client', side_effect=docker.errors.DockerException('no socket')):
+            with self.assertRaises(sandbox.SandboxUnavailable):
+                sandbox.run_command(self.ch, 'echo hello world')
+
+    def test_connection_error_before_container_raises_sandbox_unavailable(self):
+        with self.assertRaises(sandbox.SandboxUnavailable):
+            self.run_with(None, run_error=requests.exceptions.ConnectionError('daemon gone'))
+
+    def test_connection_error_on_start_removes_container_and_raises_unavailable(self):
+        c = FakeContainer(start_error=requests.exceptions.ConnectionError('daemon gone'))
+        with self.assertRaises(sandbox.SandboxUnavailable):
+            self.run_with(c)
+        self.assertEqual(c.removed_with, {'force': True, 'v': True})
+
     def test_rejects_commands_over_300_chars(self):
         with self.assertRaises(ValueError):
             sandbox.run_command(self.ch, 'x' * 301, client=FakeClient(FakeContainer()))
@@ -295,3 +312,22 @@ class ReapStaleOnceTests(SimpleTestCase):
             sandbox.reap_stale_once()
             sandbox.reap_stale_once()
         self.assertEqual(rs.call_count, 2)
+
+    def test_connection_error_is_swallowed_and_retried_next_call(self):
+        with mock.patch.object(sandbox, 'reap_stale',
+                               side_effect=[requests.exceptions.ConnectionError('gone'), 0]) as rs:
+            with self.assertLogs('challenges.sandbox', level='WARNING'):
+                sandbox.reap_stale_once()
+            sandbox.reap_stale_once()
+        self.assertEqual(rs.call_count, 2)
+
+    def test_concurrent_caller_skips_instead_of_waiting_for_a_reap_in_progress(self):
+        done = threading.Event()
+        with mock.patch.object(sandbox, 'reap_stale', return_value=0) as rs:
+            with sandbox._reap_lock:  # another thread is mid-reap
+                t = threading.Thread(target=lambda: (sandbox.reap_stale_once(), done.set()), daemon=True)
+                t.start()
+                self.assertTrue(done.wait(timeout=2), 'reap_stale_once blocked on a reap in progress')
+            rs.assert_not_called()
+            sandbox.reap_stale_once()  # the skipped caller did not mark the reap as done
+        rs.assert_called_once()

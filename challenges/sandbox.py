@@ -60,6 +60,11 @@ SANDBOX_RUN_PROFILE = {
 }
 
 
+# docker-py does not wrap every transport error (e.g. a daemon lost mid-session
+# surfaces as requests' ConnectionError), so both families mean "Docker is down".
+_DOCKER_DOWN = (docker.errors.DockerException, requests.exceptions.RequestException)
+
+
 class SandboxUnavailable(Exception):
     """Docker failed before the sandbox container existed (daemon down, image missing)."""
 
@@ -205,11 +210,11 @@ def run_command(challenge: Challenge, command: str, *, client=None,
     refused = sorted(set(host_overrides) - ALLOWED_HOST_OVERRIDES)
     if refused:
         raise ValueError(f'host_overrides not allowed: {", ".join(refused)}')
-    client = client or _get_client()
     b64 = base64.b64encode(command.encode()).decode()
     started = time.monotonic()
 
     try:
+        client = client or _get_client()
         _ensure_image(client)
         container = client.containers.create(
             settings.SANDBOX_IMAGE,
@@ -220,14 +225,14 @@ def run_command(challenge: Challenge, command: str, *, client=None,
     except docker.errors.ImageNotFound as exc:
         _forget_image(client)
         raise SandboxUnavailable(str(exc)) from exc
-    except docker.errors.DockerException as exc:
+    except _DOCKER_DOWN as exc:
         raise SandboxUnavailable(str(exc)) from exc
 
     try:
         try:
             # Inside the finally: a container that was created but never started is still removed.
             container.start()
-        except docker.errors.DockerException as exc:
+        except _DOCKER_DOWN as exc:
             raise SandboxUnavailable(str(exc)) from exc
         host_timed_out = False
         try:
@@ -291,17 +296,23 @@ def reap_stale_once() -> None:
 
     Not called from ``AppConfig.ready()``: that also runs for migrate/test and must
     not touch Docker. A Docker failure is logged and retried on the next call.
+    Callers that find a reap already in progress skip it rather than wait, so a
+    hung daemon can never queue requests here without a bound.
     """
     global _reaped_once
-    with _reap_lock:
+    if not _reap_lock.acquire(blocking=False):
+        return
+    try:
         if _reaped_once:
             return
         try:
             reap_stale(min_age_s=GAME_REAP_MIN_AGE_S)
-        except docker.errors.DockerException as exc:
+        except _DOCKER_DOWN as exc:
             logger.warning('reap_stale_once failed, will retry: %s', exc)
             return
         _reaped_once = True
+    finally:
+        _reap_lock.release()
 
 
 def _reset_reap_once() -> None:
