@@ -315,8 +315,8 @@ Show the remaining time, keep it honest across reloads and suspended or backgrou
 
 #### Automated
 
-- [x] 2.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
-- [x] 2.2 Django checks pass: `uv run python manage.py check`
+- [x] 2.1 Game and challenge tests pass: `uv run python manage.py test game challenges` — e88a071
+- [x] 2.2 Django checks pass: `uv run python manage.py check` — e88a071
 
 #### Manual
 
