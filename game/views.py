@@ -21,6 +21,7 @@ HTTP_STATUS = {
     services.UNAVAILABLE: 503,
     services.BUSY: 503,
     services.INTERNAL: 500,
+    services.TIME_UP: 409,
 }
 
 MESSAGES = {
@@ -30,6 +31,7 @@ MESSAGES = {
     services.UNAVAILABLE: 'Sandbox unavailable, try again.',
     services.BUSY: 'Server busy, try again in a moment.',
     services.INTERNAL: 'Internal error, try again.',
+    services.TIME_UP: "Time's up.",
 }
 # A valid body is at most ~1.2 KB ({"command": <300 chars, JSON-escaped>}); anything
 # bigger is rejected before parsing, which also bounds json's recursion depth.
@@ -54,6 +56,7 @@ def _session_game(request) -> GameSession | None:
     game_id = request.session.get('game_id')
     if not game_id:
         return None
+    services.expire_overdue(game_id)
     return GameSession.objects.filter(pk=game_id).first()
 
 
@@ -103,6 +106,8 @@ def play(request):
     game = _session_game(request)
     if game is None:
         return redirect('game:home')
+    if game.is_finished:
+        return redirect('game:done')
     challenge = services.current_challenge(game)
     if challenge is None:
         return redirect('game:done')
@@ -112,6 +117,7 @@ def play(request):
         'challenge': challenge,
         'info': _challenge_info(challenge),
         'last': last,
+        'remaining_ms': services.remaining_ms(game),
         'last_verdict': verdict(last.correct, last.error, last.timed_out) if last else '',
     })
 
@@ -140,6 +146,7 @@ def command(request):
         'attempts': game.attempts,
         'solved': game.solved,
         'finished': game.is_finished,
+        'remaining_ms': services.remaining_ms(game),
         'challenge': _challenge_info(challenge),
     }
     if outcome.status == services.RAN:

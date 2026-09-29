@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import timedelta
 from unittest import mock
 
 import docker.errors
@@ -7,6 +8,7 @@ import requests.exceptions
 
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from challenges import catalog, sandbox
 from game import services, views
@@ -276,3 +278,34 @@ class DescriptionFilterTests(TestCase):
     def test_every_catalog_description_renders(self):
         for ch in catalog.all_main_set():
             self.assertNotIn('```', render_description(ch.description), ch.slug)
+
+
+class TimeLimitViewTests(ViewTestCase):
+    def expire(self):
+        GameSession.objects.filter(pk=self.game().pk).update(
+            deadline_at=timezone.now() - timedelta(seconds=1))
+
+    def test_expired_game_redirects_to_done_and_done_renders(self):
+        self.start()
+        self.expire()
+        self.assertRedirects(self.client.get(reverse('game:play')), reverse('game:done'))
+        self.assertRedirects(self.client.get(reverse('game:home')), reverse('game:done'))
+        self.assertEqual(self.client.get(reverse('game:done')).status_code, 200)
+
+    def test_late_command_is_409_time_up(self):
+        self.start()
+        self.expire()
+        resp = self.command('ls')
+        self.assertEqual(resp.status_code, 409)
+        data = resp.json()
+        self.assertEqual((data['status'], data['finished'], data['message']), ('time_up', True, "Time's up."))
+        self.assertEqual(data['remaining_ms'], 0)
+        self.run_command.assert_not_called()
+
+    def test_command_response_carries_remaining_ms_but_no_game_does_not(self):
+        self.start()
+        data = self.command('ls').json()
+        self.assertAlmostEqual(data['remaining_ms'], 300_000, delta=5_000)
+        anon = self.command('ls', client=Client())
+        self.assertEqual(anon.json()['status'], 'no_game')
+        self.assertNotIn('remaining_ms', anon.json())

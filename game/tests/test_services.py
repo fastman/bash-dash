@@ -1,4 +1,5 @@
 import threading
+from datetime import timedelta
 from unittest import mock
 
 from django.test import TestCase, override_settings
@@ -172,7 +173,8 @@ class SubmitCommandTests(ServiceTestCase):
         self.assertEqual((game.attempts, game.solved, game.current_slug), (2, 1, self.order[1]))
 
     def test_run_that_overlaps_the_game_finishing_is_neither_stored_nor_counted(self):
-        # e.g. a second tab solved the last challenge (or, later, the time limit hit) mid-run.
+        # Only an all-solved finish closes the game to in-flight runs: a timeout mid-run still counts
+        # (sent-before rule), see TimeLimitTests.
         def run(challenge, command):
             GameSession.objects.filter(pk=self.game.pk).update(current_slug=None, finished_at=timezone.now())
             return result(False, output='late')
@@ -211,3 +213,124 @@ class CutMidGameTests(ServiceTestCase):
         self.assertIsNotNone(game.finished_at)
         self.assertEqual(game.solved, 0)
         self.assertEqual(services.submit_command(game.id, 'ls').status, 'finished')
+
+
+def past(game_id, seconds=1):
+    """Move a game's deadline into the past (no time mocking)."""
+    GameSession.objects.filter(pk=game_id).update(deadline_at=timezone.now() - timedelta(seconds=seconds))
+
+
+class TimeLimitTests(ServiceTestCase):
+    def setUp(self):
+        super().setUp()
+        self.game = services.start_game('neo')
+
+    def test_start_sets_deadline_from_started_at_and_setting(self):
+        game = self.fresh(self.game)
+        self.assertEqual(game.deadline_at, game.started_at + timedelta(seconds=300))
+        with override_settings(GAME_DURATION_S=42):
+            other = self.fresh(services.start_game('trinity'))
+        self.assertEqual(other.deadline_at, other.started_at + timedelta(seconds=42))
+
+    def test_submit_after_deadline_is_time_up_and_not_counted(self):
+        past(self.game.pk)
+        outcome = services.submit_command(self.game.id, 'ls')
+        self.assertEqual(outcome.status, 'time_up')
+        self.run_command.assert_not_called()
+        game = self.fresh(self.game)
+        self.assertEqual(game.attempts, 0)
+        self.assertEqual(Attempt.objects.count(), 0)
+        self.assertEqual(game.finished_at, game.deadline_at)
+        self.assertEqual(game.current_slug, 'hello_world')
+        self.assertTrue(game.timed_out)
+        # checked before validation
+        self.assertEqual(services.submit_command(self.game.id, '').status, 'time_up')
+
+    def test_all_solved_game_after_deadline_says_finished(self):
+        GameSession.objects.filter(pk=self.game.pk).update(
+            current_slug=None, finished_at=timezone.now())
+        past(self.game.pk)
+        self.assertEqual(services.submit_command(self.game.id, 'y').status, 'finished')
+        self.run_command.assert_not_called()
+
+    def test_sent_before_recorded_after_is_counted_and_solve_advances(self):
+        def run(challenge, command):
+            past(self.game.pk)
+            return result(True)
+
+        self.run_command.side_effect = run
+        outcome = services.submit_command(self.game.id, 'echo hello world')
+        self.assertEqual(outcome.status, 'ran')
+        game = self.fresh(self.game)
+        self.assertEqual((game.attempts, game.solved, game.current_slug), (1, 1, self.order[1]))
+        self.assertLessEqual(game.last_solved_at, game.deadline_at)
+        self.assertEqual(game.finished_at, game.deadline_at)
+        self.assertTrue(outcome.game.is_finished)
+        self.assertEqual(Attempt.objects.count(), 1)
+
+    def test_expired_by_another_request_mid_run_still_counts_and_stays_finished(self):
+        def run(challenge, command):
+            past(self.game.pk)
+            services.expire_overdue(self.game.pk)
+            return result(True)
+
+        self.run_command.side_effect = run
+        outcome = services.submit_command(self.game.id, 'echo hello world')
+        self.assertEqual(outcome.status, 'ran')
+        game = self.fresh(self.game)
+        self.assertEqual((game.attempts, game.solved), (1, 1))
+        self.assertEqual(game.finished_at, game.deadline_at)
+
+    def test_grace_solve_of_last_challenge_is_stamped_at_deadline(self):
+        GameSession.objects.filter(pk=self.game.pk).update(current_slug=self.order[-1])
+
+        def run(challenge, command):
+            past(self.game.pk)
+            return result(True)
+
+        self.run_command.side_effect = run
+        services.submit_command(self.game.id, 'x')
+        game = self.fresh(self.game)
+        self.assertIsNone(game.current_slug)
+        self.assertEqual(game.finished_at, game.deadline_at)
+        self.assertEqual(game.last_solved_at, game.deadline_at)
+        self.assertFalse(game.timed_out)
+
+    def test_timed_out_property(self):
+        past(self.game.pk)
+        services.expire_overdue(self.game.pk)
+        self.assertTrue(self.fresh(self.game).timed_out)
+        self.assertFalse(self.game.timed_out)  # unfinished, stale instance
+        GameSession.objects.filter(pk=self.game.pk).update(current_slug=None)
+        self.assertFalse(self.fresh(self.game).timed_out)
+
+    def test_expire_overdue_only_touches_overdue_unfinished_games(self):
+        overdue = services.start_game('a')
+        in_time = services.start_game('b')
+        done = services.start_game('c')
+        past(overdue.pk)
+        past(done.pk)
+        stamp = timezone.now() - timedelta(minutes=10)
+        GameSession.objects.filter(pk=done.pk).update(finished_at=stamp)
+        self.assertEqual(services.expire_overdue(), 1)
+        self.assertEqual(self.fresh(overdue).finished_at, self.fresh(overdue).deadline_at)
+        self.assertIsNone(self.fresh(in_time).finished_at)
+        self.assertEqual(self.fresh(done).finished_at, stamp)
+        self.assertEqual(services.expire_overdue(), 0)  # idempotent
+
+    def test_remaining_ms_is_clamped_and_zero_when_finished(self):
+        now = self.fresh(self.game).started_at
+        self.assertEqual(services.remaining_ms(self.fresh(self.game), now=now), 300_000)
+        self.assertEqual(services.remaining_ms(self.fresh(self.game), now=now + timedelta(seconds=100.5)), 199_500)
+        self.assertEqual(services.remaining_ms(self.fresh(self.game), now=now + timedelta(hours=1)), 0)
+        GameSession.objects.filter(pk=self.game.pk).update(finished_at=now)
+        self.assertEqual(services.remaining_ms(self.fresh(self.game), now=now), 0)
+
+    def test_cut_finish_does_not_overwrite_timeout_stamp(self):
+        GameSession.objects.filter(pk=self.game.pk).update(current_slug=self.order[-1])
+        self.cut(self.order[-1])
+        past(self.game.pk)
+        services.expire_overdue(self.game.pk)
+        stamped = self.fresh(self.game)
+        services.current_challenge(stamped)
+        self.assertEqual(self.fresh(self.game).finished_at, stamped.deadline_at)

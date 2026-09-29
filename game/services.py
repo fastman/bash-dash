@@ -10,10 +10,12 @@ then one short ``transaction.atomic()`` for the Attempt + conditional updates.
 import logging
 import threading
 from dataclasses import dataclass
+from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
+from django.db.models.functions import Coalesce, Least
 from django.utils import timezone
 
 from challenges import catalog, sandbox
@@ -22,6 +24,9 @@ from challenges.catalog import Challenge
 from .models import Attempt, GameSession
 
 logger = logging.getLogger('game')
+
+# Query form of GameSession.timed_out: finished by the clock, still on a challenge.
+TIMED_OUT_Q = Q(finished_at=F('deadline_at'), current_slug__isnull=False)
 
 NICK_MAX_CHARS = 20
 
@@ -32,6 +37,7 @@ TOO_LONG = 'too_long'
 EMPTY = 'empty'
 UNAVAILABLE = 'unavailable'
 BUSY = 'busy'
+TIME_UP = 'time_up'
 INTERNAL = 'internal'
 
 
@@ -70,7 +76,26 @@ def start_game(nick: str) -> GameSession:
     first = catalog.first_playable()
     if first is None:
         raise RuntimeError('no playable challenges')
-    return GameSession.objects.create(nick=nick, current_slug=first.slug)
+    now = timezone.now()
+    return GameSession.objects.create(
+        nick=nick, current_slug=first.slug, started_at=now,
+        deadline_at=now + timedelta(seconds=settings.GAME_DURATION_S))
+
+
+def expire_overdue(game_id=None, now=None) -> int:
+    """Finish overdue games at their deadline. Idempotent; returns the number finished."""
+    now = now or timezone.now()
+    qs = GameSession.objects.filter(finished_at__isnull=True, deadline_at__lte=now)
+    if game_id is not None:
+        qs = qs.filter(pk=game_id)
+    return qs.update(finished_at=F('deadline_at'))
+
+
+def remaining_ms(game: GameSession, now=None) -> int:
+    if game.is_finished:
+        return 0
+    now = now or timezone.now()
+    return max(0, int((game.deadline_at - now).total_seconds() * 1000))
 
 
 def current_challenge(game: GameSession) -> Challenge | None:
@@ -89,15 +114,21 @@ def current_challenge(game: GameSession) -> Challenge | None:
     if nxt is not None:
         GameSession.objects.filter(pk=game.pk, current_slug=old).update(current_slug=nxt.slug)
     else:
-        GameSession.objects.filter(pk=game.pk, current_slug=old).update(
+        GameSession.objects.filter(pk=game.pk, current_slug=old, finished_at__isnull=True).update(
             current_slug=None, finished_at=timezone.now())
     game.refresh_from_db()
     return catalog.playable(game.current_slug) if game.current_slug else None
 
 
 def submit_command(game_id, command: str) -> SubmitOutcome:
+    now = timezone.now()
+    expire_overdue(game_id, now)
     game = GameSession.objects.get(pk=game_id)
-    challenge = None if game.is_finished else current_challenge(game)
+    if game.is_finished and not game.timed_out:  # all solved, or the catalog ran out
+        return SubmitOutcome(FINISHED, None, game)
+    if now >= game.deadline_at:
+        return SubmitOutcome(TIME_UP, None, game)
+    challenge = current_challenge(game)
     if challenge is None:
         return SubmitOutcome(FINISHED, None, game)
     if not command.strip():
@@ -125,19 +156,23 @@ def submit_command(game_id, command: str) -> SubmitOutcome:
         return SubmitOutcome(INTERNAL, result, game)
 
     counted = _record(game, challenge, command, result)
+    expire_overdue(game.pk)
     game.refresh_from_db()
     return SubmitOutcome(RAN if counted else FINISHED, result if counted else None, game)
 
 
 def _record(game: GameSession, challenge: Challenge, command: str, result: sandbox.SandboxResult) -> bool:
-    """Count the run and store its Attempt, unless the game finished while it ran.
+    """Count the run and store its Attempt, unless the game finished (other than by timeout) while it ran.
+
+    A run sent before the deadline counts even if the game was expired meanwhile; the
+    entry check in ``submit_command`` is what rejects commands sent after it.
 
     The counter update goes first and gates the insert, so Attempt rows and
     ``GameSession.attempts`` always agree. Returns whether the run was counted.
     """
     now = timezone.now()
     with transaction.atomic():
-        counted = GameSession.objects.filter(pk=game.pk, finished_at__isnull=True).update(
+        counted = GameSession.objects.filter(Q(finished_at__isnull=True) | TIMED_OUT_Q, pk=game.pk).update(
             attempts=F('attempts') + 1)
         if not counted:
             return False
@@ -149,11 +184,13 @@ def _record(game: GameSession, challenge: Challenge, command: str, result: sandb
         if result.correct:
             nxt = catalog.next_playable(challenge.slug)
             # The current_slug guard makes a duplicate correct submit advance once.
+            # Timestamps are capped at the deadline; an existing finished_at is never cleared or moved.
+            stamp = Least(now, F('deadline_at'))
             GameSession.objects.filter(pk=game.pk, current_slug=challenge.slug).update(
                 solved=F('solved') + 1,
-                last_solved_at=now,
+                last_solved_at=stamp,
                 current_slug=nxt.slug if nxt else None,
-                finished_at=None if nxt else now,
+                finished_at=Coalesce(F('finished_at'), stamp) if not nxt else F('finished_at'),
             )
     return True
 
