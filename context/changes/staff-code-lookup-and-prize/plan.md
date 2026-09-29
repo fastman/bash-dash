@@ -285,7 +285,7 @@ A lookup runs one indexed `SELECT` by code, the bulk `expire_overdue` `UPDATE`, 
 
 #### Manual
 
-- [ ] 1.5 Admin shows the prize-given column and filter and stays read-only — a909510
+- [x] 1.5 Admin shows the prize-given column and filter and stays read-only — a909510
 
 ### Phase 2: Staff lookup page
 
@@ -297,7 +297,7 @@ A lookup runs one indexed `SELECT` by code, the bulk `expire_overdue` `UPDATE`, 
 
 #### Manual
 
-- [ ] 2.4 Logged-out `/staff` goes to admin login and returns after login — 5174881
-- [ ] 2.5 Lookup form and card fit 360 px and 320 px; numeric keyboard on a real phone
-- [ ] 2.6 End to end: lookup matches `/done`, prize marked, second press shows "already given" — 5174881 (verified by HTTP tests)
+- [x] 2.4 Logged-out `/staff` goes to admin login and returns after login — 5174881
+- [x] 2.5 Lookup form and card fit 360 px and 320 px; numeric keyboard on a real phone
+- [x] 2.6 End to end: lookup matches `/done`, prize marked, second press shows "already given" — 5174881 (verified by HTTP tests)
 - [x] 2.7 In-progress game shows "Game in progress" and no prize button — 5174881 (verified by HTTP tests)
