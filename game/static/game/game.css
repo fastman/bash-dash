@@ -275,9 +275,12 @@ button:disabled, input:disabled { opacity: 0.6; }
 .muted { color: var(--muted); font-size: 0.85rem; }
 
 .staff form { margin: 12px 0; }
-.staff input[name="code"] { width: 100%; box-sizing: border-box; font-family: var(--mono); font-size: 1.5rem; letter-spacing: 0.15em; }
-.staff-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 16px 0; overflow-wrap: anywhere; }
-.staff-nick { font-size: 2rem; font-weight: bold; margin: 0; }
+.staff-nav { font-size: 13px; }
+.lookup-row { display: flex; gap: 8px; }
+.lookup-row .code-input { font-size: 24px; letter-spacing: 0.15em; flex: 1; }
+.lookup-row button { flex: none; }
+.staff-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 16px 0; overflow-wrap: anywhere; }
+.staff-nick { font-size: 30px; font-weight: bold; color: var(--yellow); margin: 0; }
 .notice-ok, .notice-warn, .notice-bad { border: 1px solid; border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
 .notice-ok::before { content: "\2713  "; }
 .notice-warn::before { content: "!  "; }
@@ -285,8 +288,8 @@ button:disabled, input:disabled { opacity: 0.6; }
 .notice-ok { color: var(--lime); }
 .notice-warn { color: var(--yellow); }
 .notice-bad { color: var(--red-text); border-color: var(--red); }
-.prize-button { width: 100%; font-size: 1.25rem; padding: 16px; }
-.logout .link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 0; cursor: pointer; }
+.prize-button { width: 100%; min-height: 56px; font-size: 18px; background: var(--lime); }
+.logout .link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 0; min-height: 0; font-size: 14px; font-weight: normal; cursor: pointer; }
 
 /* Hall of fame big screen (S-05) */
 main.hall { max-width: 110rem; padding: 44px 56px; }
@@ -339,10 +342,15 @@ main.hall { max-width: 110rem; padding: 44px 56px; }
 }
 
 /* Moderation (S-05) */
-.moderate .mod-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.rule .cyan-text { color: var(--cyan); }
+.moderate h2.rule { font-size: 15px; margin: 24px 0 8px; }
+.moderate .mod-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-soft); margin: 0; }
 .moderate .mod-row .nick { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.moderate .mod-row .muted { font-size: 0.8rem; white-space: nowrap; }
+.moderate .mod-row .place { color: var(--lime); }
+.moderate .mod-row .muted { font-size: 12px; white-space: nowrap; }
 .moderate .mod-row button { flex: none; min-height: 44px; padding: 0 14px; }
-.moderate .hide-button { background: var(--red-text); border-color: var(--red-text); color: #fff; }
-.staff-nav { font-size: 0.9rem; }
+.moderate .mod-row input[type=number] { width: 72px; text-align: right; flex: none; }
+.moderate .hide-button { background: transparent; border: 1px solid var(--red); color: var(--red-text); }
+.moderate .unhide-button { background: transparent; border: 1px solid var(--border); color: var(--fg); }
+.moderate form:has(.unhide-button) .nick { color: var(--muted); text-decoration: line-through; }
 @media (max-width: 400px) { .moderate .mod-row { flex-wrap: wrap; } .moderate .mod-row .muted { order: 3; width: 100%; } }

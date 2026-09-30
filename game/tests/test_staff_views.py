@@ -84,7 +84,7 @@ class LookupTests(StaffTestCase):
     def test_finished_game_with_no_solves_shows_dash(self):
         self.make_game(solved=0)
         resp = self.client.get(self.lookup, {'code': CODE})
-        self.assertContains(resp, 'Solve time: <strong>—</strong>')
+        self.assertRegex(resp.content.decode(), r'Solve time</span>\s*<span class="leader"></span>\s*<strong>—</strong>')
 
     def test_unranked_finished_game_keeps_button(self):
         self.make_game()

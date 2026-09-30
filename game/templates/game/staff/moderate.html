@@ -1,5 +1,6 @@
 {% extends 'game/base.html' %}
 {% block title %}Moderation{% endblock %}
+{% block badge %}<span class="badge yellow">STAFF</span>{% endblock %}
 {% block content %}
 <section class="staff moderate">
   <h1>Hall of fame moderation</h1>
@@ -8,7 +9,7 @@
   <p class="notice-{% if message.level_tag == 'success' %}ok{% elif message.level_tag == 'warning' %}warn{% else %}bad{% endif %}">{{ message }}</p>
   {% endfor %}
 
-  <h2>Start QR</h2>
+  <h2 class="rule"><span class="label cyan-text">Start QR</span></h2>
   {% if token_never_expires %}<p class="notice-warn">QR codes never expire — anyone with an old code or photo can start a game.</p>{% endif %}
   <form method="post" action="{% url 'game:staff_token_ttl' %}" class="mod-row">
     {% csrf_token %}
@@ -18,7 +19,7 @@
   </form>
   <p class="muted">0 = never expires</p>
 
-  <h2>On screen: top {{ board.top|length }}</h2>
+  <h2 class="rule"><span class="label cyan-text">On screen: top {{ board.top|length }}</span></h2>
   {% for r in board.top %}
   <form method="post" action="{% url 'game:staff_hide' %}" class="mod-row">
     {% csrf_token %}<input type="hidden" name="game_id" value="{{ r.game_id }}">
@@ -28,7 +29,7 @@
   </form>
   {% empty %}<p class="muted">No finished games yet</p>{% endfor %}
 
-  <h2>On screen: just finished</h2>
+  <h2 class="rule"><span class="label cyan-text">On screen: just finished</span></h2>
   {% for r in board.recent %}
   <form method="post" action="{% url 'game:staff_hide' %}" class="mod-row">
     {% csrf_token %}<input type="hidden" name="game_id" value="{{ r.game_id }}">
@@ -38,7 +39,7 @@
   </form>
   {% empty %}<p class="muted">Nobody has finished yet</p>{% endfor %}
 
-  <h2>Hidden</h2>
+  <h2 class="rule"><span class="label cyan-text">Hidden</span></h2>
   {% for g in hidden %}
   <form method="post" action="{% url 'game:staff_unhide' %}" class="mod-row">
     {% csrf_token %}<input type="hidden" name="game_id" value="{{ g.pk }}">
