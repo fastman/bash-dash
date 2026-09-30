@@ -92,7 +92,7 @@ Replace the length-only check in `start_game` with the character and length rule
 
 **Intent**: Pin the rule in both directions.
 
-**Contract**: Extend `test_empty_and_too_long_nicks_are_rejected` (or add a sibling test) so it rejects: `''`, `'   '`, `'x' * 13`, `'ab cd'`, `'abc-def'`, `'zażółć'`, `'neo!'`, `'<b>x</b>'`, an inner newline (`'a\nb'`), and a Unicode digit (`'٣'`). Add a test that accepts `'x' * 12`, `'Neo_42'`, `'_'`, `'123'`, and `'  neo_1  '` (stored as `'neo_1'`). Assert that no `GameSession` is created for the rejected cases.
+**Contract**: Make `test_empty_and_too_long_nicks_are_rejected` rejection-only: drop its 20-character acceptance and the one-game assertion (`test_services.py:55-56`), use 13 characters as the too-long case, and assert the `GameSession` count is 0. It rejects: `''`, `'   '`, `'x' * 13`, `'ab cd'`, `'abc-def'`, `'zażółć'`, `'neo!'`, `'<b>x</b>'`, an inner newline (`'a\nb'`), and a Unicode digit (`'٣'`). Put all accepted cases in a new sibling test, which accepts `'x' * 12`, `'Neo_42'`, `'_'`, `'123'`, and `'  neo_1  '` (stored as `'neo_1'`). Assert that no `GameSession` is created for the rejected cases.
 
 **File**: `game/tests/test_views.py`
 
@@ -142,7 +142,7 @@ Show the rule on the start form and add matching HTML validation, so most player
 
 **Intent**: State the rule next to the field and stop over-long or badly-formed nicks in the browser.
 
-**Contract**: The nick `<input>` gets `maxlength="12"`, `pattern="[A-Za-z0-9_]{1,12}"` and a `title` with the same wording as the hint (browsers show it in the validation popup). Add a short hint line under the label, such as "Letters, digits and _ · max 12". Link it with `aria-describedby` on the input. The existing `autocapitalize/autocorrect/autocomplete/spellcheck` attributes stay. Either hardcode 12 or pass `NICK_MAX_CHARS` from the view. If you hardcode it, add a test that fails when the two drift apart.
+**Contract**: The nick `<input>` gets `maxlength="12"`, `pattern="[A-Za-z0-9_]{1,12}"` and a `title` with the same wording as the hint (browsers show it in the validation popup). Add a short hint line under the label, such as "Letters, digits and _ · max 12". Link it with `aria-describedby` on the input. The existing `autocapitalize/autocorrect/autocomplete/spellcheck` attributes stay. Hardcode `maxlength` and `pattern` in the template (do not pass them from the view). The test below compares them with `services.NICK_MAX_CHARS` and `services.NICK_RE.pattern` so drift is caught.
 
 #### 2. Hint styling
 
@@ -156,7 +156,7 @@ Show the rule on the start form and add matching HTML validation, so most player
 
 **File**: `game/tests/test_views.py`
 
-**Contract**: Extend `test_home_renders_rules_and_nick_form` (or add a test) to assert that the home page contains `maxlength="12"` and the `pattern` attribute.
+**Contract**: Extend `test_home_renders_rules_and_nick_form` (or add a test) to assert that the home page contains `maxlength="{services.NICK_MAX_CHARS}"` and `pattern="{services.NICK_RE.pattern}"`.
 
 ### Success Criteria:
 
