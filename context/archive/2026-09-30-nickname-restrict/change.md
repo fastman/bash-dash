@@ -1,10 +1,10 @@
 ---
 change_id: nickname-restrict
 title: Restrict allowed nicknames (server-side validation)
-status: impl_reviewed
+status: archived
 created: 2026-09-30
 updated: 2026-09-30
-archived_at: null
+archived_at: 2026-09-30T14:33:57Z
 ---
 
 ## Notes
