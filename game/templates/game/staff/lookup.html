@@ -4,6 +4,7 @@
 {% block content %}
 <section class="staff">
   <h1>Prize desk</h1>
+  <p class="staff-nav"><a href="{% url 'game:staff_hall' %}">Hall of fame screen</a> · <a href="{% url 'game:staff_moderate' %}">Moderation</a></p>
   {% for message in messages %}
   <p class="notice-{% if message.level_tag == 'success' %}ok{% elif message.level_tag == 'warning' %}warn{% else %}bad{% endif %}">{{ message }}</p>
   {% endfor %}

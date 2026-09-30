@@ -14,5 +14,8 @@ urlpatterns = [
     path('staff', staff_views.lookup, name='staff_lookup'),
     path('staff/hall', staff_views.hall, name='staff_hall'),
     path('staff/hall/board', staff_views.hall_board, name='staff_hall_board'),
+    path('staff/moderate', staff_views.moderate, name='staff_moderate'),
+    path('staff/hide', staff_views.hide, name='staff_hide'),
+    path('staff/unhide', staff_views.unhide, name='staff_unhide'),
     path('staff/prize', staff_views.give_prize, name='staff_prize'),
 ]

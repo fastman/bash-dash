@@ -168,3 +168,12 @@ main.hall { max-width: 110rem; }
   .hall #board { grid-template-columns: 1fr; }
   .hall .hall-row { font-size: 1.25rem; }
 }
+
+/* Moderation (S-05) */
+.moderate .mod-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.moderate .mod-row .nick { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.moderate .mod-row .muted { font-size: 0.8rem; white-space: nowrap; }
+.moderate .mod-row button { flex: none; min-height: 44px; padding: 0 14px; }
+.moderate .hide-button { background: var(--bad); border-color: var(--bad); color: #fff; }
+.staff-nav { font-size: 0.9rem; }
+@media (max-width: 400px) { .moderate .mod-row { flex-wrap: wrap; } .moderate .mod-row .muted { order: 3; width: 100%; } }
