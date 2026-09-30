@@ -3,7 +3,7 @@ project: bash-dash
 version: 1
 status: draft                    # draft | active | locked
 created: 2026-09-29
-updated: 2026-09-29
+updated: 2026-09-30
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -44,7 +44,7 @@ techniczna (integracja, utwardzenie, ok. 6 s na komendę).
 | S-02 | server-side-time-limit        | gracz widzi pozostały czas, po odświeżeniu wraca do tej samej sesji, a gra kończy się po 5 min lub po wszystkich zadaniach | S-01          | US-01, FR-006, FR-007                       | done |
 | S-03 | summary-with-prize-code       | gracz po zakończeniu gry widzi liczbę zadań, podejść, miejsce w rankingu i unikalny 6-cyfrowy kod        | S-02          | US-01, FR-008                               | done     |
 | S-04 | staff-code-lookup-and-prize   | obsługa loguje się hasłem, znajduje wynik po kodzie i oznacza „nagroda wydana”                          | S-03          | US-01, FR-011, FR-013                       | done     |
-| S-05 | hall-of-fame-screen           | obsługa wyświetla auto-odświeżany ranking top N z ostatnimi wynikami i ukrywa nicki (dyskwalifikacja)   | S-03          | US-01, FR-010, FR-012                       | proposed |
+| S-05 | hall-of-fame-screen           | obsługa wyświetla auto-odświeżany ranking top N z ostatnimi wynikami i ukrywa nicki (dyskwalifikacja)   | S-03          | US-01, FR-010, FR-012                       | done     |
 | S-06 | qr-token-gate                 | gracz może zacząć grę tylko po zeskanowaniu aktualnego, rotującego QR z ekranu rankingu                 | S-01, S-05    | US-01, FR-001, FR-017                       | proposed |
 
 ## Streams
@@ -169,7 +169,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Rozmiar top N, liczba ostatnich wyników i częstotliwość odświeżania (Open Question 3). — Owner: user. Block: no (rozsądne wartości domyślne, do zmiany w trakcie).
 - **Risk:** drugorzędne kryterium sukcesu (ruch przy stoisku), ale też miejsce na QR z S-06, więc musi powstać przed nim.
-- **Status:** proposed
+- **Status:** done
 
 ### S-06: Start gry tylko z aktualnego kodu QR
 
@@ -232,3 +232,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-02: gracz widzi pozostały czas, po odświeżeniu strony wraca do tej samej sesji z tym samym czasem, a gra kończy się po 5 minutach od „Start” lub po rozwiązaniu wszystkich zadań; komendy wysłane po czasie się nie liczą.** — Archived 2026-09-29 → `context/archive/2026-09-29-server-side-time-limit/`. Lesson: —.
 - **S-03: gracz po zakończeniu gry widzi liczbę rozwiązanych zadań, liczbę podejść, swoje miejsce w rankingu i unikalny 6-cyfrowy kod.** — Archived 2026-09-29 → `context/archive/2026-09-29-summary-with-prize-code/`. Lesson: —.
 - **S-04: obsługa loguje się hasłem, wyszukuje wynik po 6-cyfrowym kodzie (nick, zadania, podejścia, miejsce, czas) i oznacza „nagroda wydana”.** — Archived 2026-09-29 → `context/archive/2026-09-29-staff-code-lookup-and-prize/`. Lesson: —.
+- **S-05: obsługa wyświetla na ekranie przy stoisku automatycznie odświeżany ranking top N (miejsce, nick, zadania, podejścia) i listę ostatnio zakończonych gier, a ukryty przez nią nick znika z rankingu bez kasowania wyniku.** — Archived 2026-09-30 → `context/archive/2026-09-30-hall-of-fame-screen/`. Lesson: —.
