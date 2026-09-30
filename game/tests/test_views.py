@@ -397,3 +397,11 @@ class SummaryTests(ViewTestCase):
         self.assertRedirects(self.client.get(reverse('game:done')), reverse('game:home'))
         self.start()
         self.assertRedirects(self.client.get(reverse('game:done')), reverse('game:play'))
+
+    def test_hidden_game_done_shows_not_ranked_and_code(self):
+        self.finish(solved=1, attempts=3)
+        services.hide_game(self.game().pk)
+        resp = self.client.get(reverse('game:done'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'not ranked')
+        self.assertContains(resp, self.CODE)

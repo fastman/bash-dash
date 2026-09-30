@@ -87,7 +87,7 @@ class PrizeCodeTests(ServiceTestCase):
             GameSession.objects.create(nick='b', deadline_at=now, code=first.code)
 
 
-class RankingTests(ServiceTestCase):
+class RankingFixtureMixin(ServiceTestCase):
     def make(self, solved=0, attempts=0, elapsed=None, finished=True, deadline_in=300):
         now = timezone.now()
         start = now - timedelta(seconds=1000)
@@ -102,6 +102,8 @@ class RankingTests(ServiceTestCase):
     def place(self, game):
         return services.rank_of(game)[0]
 
+
+class RankingTests(RankingFixtureMixin):
     def test_orders_by_solved_then_attempts_then_elapsed(self):
         a = self.make(solved=3, attempts=9, elapsed=100)
         b = self.make(solved=2, attempts=2, elapsed=10)
@@ -142,6 +144,82 @@ class RankingTests(ServiceTestCase):
         GameSession.objects.filter(pk=done.pk).update(current_slug=None)
         self.assertEqual(services.rank_of(self.fresh(timed_out)), (2, 2))
         self.assertEqual(services.rank_of(self.fresh(done)), (1, 2))
+
+
+class HiddenAndHallTests(RankingFixtureMixin):
+    def test_hidden_game_is_unranked_and_others_move_up(self):
+        a = self.make(solved=3, attempts=1, elapsed=10)
+        b = self.make(solved=2, attempts=1, elapsed=10)
+        self.assertEqual(services.rank_of(b), (2, 2))
+        services.hide_game(a.pk)
+        self.assertIsNone(services.rank_of(self.fresh(a)))
+        self.assertEqual(services.rank_of(b), (1, 1))
+        services.unhide_game(a.pk)
+        self.assertEqual(services.rank_of(b), (2, 2))
+
+    def test_hide_and_unhide_are_idempotent_and_keep_result(self):
+        a = self.make(solved=2, attempts=4, elapsed=10)
+        GameSession.objects.filter(pk=a.pk).update(prize_given_at=timezone.now())
+        a = self.fresh(a)
+        now = timezone.now()
+        game, changed = services.hide_game(a.pk, now=now)
+        self.assertTrue(changed)
+        self.assertTrue(game.is_hidden)
+        game, changed = services.hide_game(a.pk, now=now + timedelta(seconds=9))
+        self.assertFalse(changed)
+        self.assertEqual(game.hidden_at, now)
+        after = self.fresh(a)
+        self.assertEqual((after.solved, after.attempts, after.code, after.prize_given_at),
+                         (a.solved, a.attempts, a.code, a.prize_given_at))
+        self.assertEqual(services.unhide_game(a.pk)[1], True)
+        self.assertEqual(services.unhide_game(a.pk)[1], False)
+        self.assertIsNone(self.fresh(a).hidden_at)
+
+    def test_unknown_or_malformed_id_raises_does_not_exist(self):
+        import uuid
+        for bad in (uuid.uuid4(), 'not-a-uuid', ''):
+            for fn in (services.hide_game, services.unhide_game):
+                with self.assertRaises(GameSession.DoesNotExist):
+                    fn(bad)
+
+    def test_hall_of_fame_top_recent_and_exclusions(self):
+        g = [self.make(solved=3, attempts=3, elapsed=50),
+             self.make(solved=2, attempts=3, elapsed=50),
+             self.make(solved=2, attempts=3, elapsed=50),
+             self.make(solved=1, attempts=1, elapsed=5),
+             self.make(attempts=2)]
+        for i, game in enumerate(g):  # finish order: g[0] oldest ... g[4] newest
+            GameSession.objects.filter(pk=game.pk).update(
+                finished_at=timezone.now() - timedelta(minutes=10 - i))
+        hidden = self.make(solved=5, attempts=1, elapsed=1)
+        services.hide_game(hidden.pk)
+        self.make(solved=5, attempts=1, elapsed=1, finished=False)
+        overdue = self.make(solved=1, attempts=9, elapsed=5, finished=False, deadline_in=-5)
+        board = services.hall_of_fame(top_n=4, recent_n=3)
+        self.assertEqual(board.ranked_total, 6)
+        self.assertEqual([r.place for r in board.top], [1, 2, 2, 4])
+        self.assertEqual(len(board.top), 4)
+        self.assertNotIn(hidden.pk, [r.game_id for r in board.top + board.recent])
+        self.assertEqual(len(board.recent), 3)
+        self.assertEqual(board.recent[0].game_id, overdue.pk)  # expired just now -> deadline is newest
+        self.assertEqual([r.game_id for r in board.recent[1:]], [g[4].pk, g[3].pk])
+
+    def test_hall_places_match_rank_of(self):
+        games = [self.make(solved=s, attempts=a, elapsed=e) for s, a, e in
+                 [(2, 3, 50), (2, 3, 50), (3, 9, 1), (0, 4, None), (0, 4, None), (0, 1, None), (1, 1, 5)]]
+        board = services.hall_of_fame(top_n=100, recent_n=100)
+        places = {r.game_id: r.place for r in board.top}
+        self.assertEqual(len(places), len(games))
+        for game in games:
+            self.assertEqual(places[game.pk], services.rank_of(game)[0])
+        self.assertEqual({r.game_id: r.place for r in board.recent}, places)
+
+    def test_hidden_games_lists_newest_hidden_first(self):
+        a, b = self.make(solved=1), self.make(solved=1)
+        now = timezone.now()
+        services.hide_game(a.pk, now=now)
+        services.hide_game(b.pk, now=now + timedelta(seconds=5))
+        self.assertEqual([g.pk for g in services.hidden_games()], [b.pk, a.pk])
 
 
 class SubmitCommandTests(ServiceTestCase):

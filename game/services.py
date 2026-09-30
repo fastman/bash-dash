@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import DurationField, ExpressionWrapper, F, Q
 from django.db.models.functions import Coalesce, Least
@@ -104,11 +105,11 @@ def expire_overdue(game_id=None, now=None) -> int:
 def ranked_games():
     """Finished games in ranking order: solved desc, attempts asc, solve time asc.
 
-    The single definition of the PRD ranking rule; S-05 adds its "hidden" filter here.
+    The single definition of the PRD ranking rule. Hidden (disqualified) games are not ranked.
     Overdue games are finished first. ``elapsed`` is NULL when nothing was solved.
     """
     expire_overdue()
-    return GameSession.objects.filter(finished_at__isnull=False).annotate(
+    return GameSession.objects.filter(finished_at__isnull=False, hidden_at__isnull=True).annotate(
         elapsed=ExpressionWrapper(F('last_solved_at') - F('started_at'), output_field=DurationField()),
     ).order_by('-solved', 'attempts', 'elapsed', 'started_at')
 
@@ -123,6 +124,58 @@ def rank_of(game: GameSession) -> tuple[int, int] | None:
     if me.elapsed is not None:
         better |= Q(solved=me.solved, attempts=me.attempts, elapsed__lt=me.elapsed)
     return 1 + ranked.filter(better).count(), ranked.count()
+
+
+def _set_hidden(game_id, hide: bool, now=None) -> tuple[GameSession, bool]:
+    try:
+        qs = GameSession.objects.filter(pk=game_id, hidden_at__isnull=hide)
+        changed = qs.update(hidden_at=(now or timezone.now()) if hide else None) == 1
+        return GameSession.objects.get(pk=game_id), changed
+    except (ValidationError, ValueError):
+        raise GameSession.DoesNotExist(f'bad game id: {game_id!r}') from None
+
+
+def hide_game(game_id, now=None) -> tuple[GameSession, bool]:
+    """Disqualify a game from the ranking. Returns ``(game, True)`` if this call hid it."""
+    return _set_hidden(game_id, True, now)
+
+
+def unhide_game(game_id) -> tuple[GameSession, bool]:
+    """Undo ``hide_game``. Returns ``(game, True)`` if this call unhid it."""
+    return _set_hidden(game_id, False)
+
+
+def hidden_games():
+    return GameSession.objects.filter(hidden_at__isnull=False).order_by('-hidden_at')
+
+
+@dataclass(frozen=True)
+class BoardRow:
+    game_id: object
+    nick: str
+    solved: int
+    attempts: int
+    place: int
+
+
+@dataclass(frozen=True)
+class Board:
+    top: list
+    recent: list
+    ranked_total: int
+
+
+def hall_of_fame(top_n: int, recent_n: int) -> Board:
+    """Top ``top_n`` and the ``recent_n`` latest finished games; places from one ranked pass."""
+    rows = []
+    prev_key = prev_place = None
+    for i, g in enumerate(ranked_games(), start=1):
+        key = (g.solved, g.attempts, g.elapsed)
+        place = prev_place if key == prev_key else i
+        prev_key, prev_place = key, place
+        rows.append((g, BoardRow(g.pk, g.nick, g.solved, g.attempts, place)))
+    latest = sorted(rows, key=lambda r: (r[0].finished_at, r[0].pk), reverse=True)[:recent_n]
+    return Board(top=[r for _, r in rows[:top_n]], recent=[r for _, r in latest], ranked_total=len(rows))
 
 
 def remaining_ms(game: GameSession, now=None) -> int:

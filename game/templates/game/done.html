@@ -5,7 +5,7 @@
   <p>Well played, <strong>{{ game.nick }}</strong>.</p>
   <p>Solved: <strong>{{ game.solved }} / {{ total }}</strong></p>
   <p>Attempts: <strong>{{ game.attempts }}</strong></p>
-  <p>Place: <strong>#{{ place }} of {{ ranked_total }}</strong></p>
+  <p>Place: <strong>{% if place %}#{{ place }} of {{ ranked_total }}{% else %}not ranked{% endif %}</strong></p>
   <div class="prize">
     <p class="prize-code">{{ game.code }}</p>
     <p>Show this code at the booth to claim your prize.</p>

@@ -2,7 +2,7 @@ from datetime import timedelta
 from unittest import mock
 
 from django.contrib.auth.models import User
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -21,12 +21,13 @@ class StaffTestCase(TestCase):
         self.lookup = reverse('game:staff_lookup')
         self.prize = reverse('game:staff_prize')
 
-    def make_game(self, finished=True, solved=1, attempts=3, nick='neo'):
+    def make_game(self, finished=True, solved=1, attempts=3, nick='neo', code=CODE, elapsed=75, finished_ago=0):
         game = services.start_game(nick)
-        fields = dict(code=CODE, solved=solved, attempts=attempts)
+        fields = dict(code=code, solved=solved, attempts=attempts)
         if finished:
-            now = game.started_at + timedelta(seconds=75)
-            fields.update(finished_at=now, last_solved_at=now if solved else None)
+            now = game.started_at + timedelta(seconds=elapsed)
+            fields['finished_at'] = now - timedelta(seconds=finished_ago)
+            fields['last_solved_at'] = now if solved else None
         GameSession.objects.filter(pk=game.pk).update(**fields)
         return GameSession.objects.get(pk=game.pk)
 
@@ -124,3 +125,175 @@ class MmssTests(TestCase):
         from game.templatetags.game_text import mmss
         self.assertEqual(mmss(timedelta(seconds=74, milliseconds=900)), '1:14')
         self.assertEqual(mmss(None), '—')
+
+
+class HiddenLookupTests(StaffTestCase):
+    def test_hidden_game_shows_disqualified_and_keeps_prize_button(self):
+        game = self.make_game()
+        services.hide_game(game.pk)
+        resp = self.client.get(self.lookup, {'code': CODE})
+        self.assertContains(resp, 'Hidden from Hall of fame (disqualified)')
+        self.assertContains(resp, 'Mark prize given')
+        self.assertNotContains(resp, 'not ranked')
+
+
+class HallTests(StaffTestCase):
+    def setUp(self):
+        super().setUp()
+        self.hall = reverse('game:staff_hall')
+        self.board = reverse('game:staff_hall_board')
+
+    def fixture(self):
+        self.make_game(nick='ann', solved=3, attempts=5, code='111111', finished_ago=30)
+        self.make_game(nick='bob', solved=2, attempts=4, code='222222', finished_ago=20)
+        self.make_game(nick='cy', solved=2, attempts=4, code='333333', finished_ago=10)
+        self.make_game(nick='dee', solved=1, attempts=1, code='444444', finished_ago=0)
+        return ['111111', '222222', '333333', '444444']
+
+    def test_anonymous_redirects_and_fragment_is_403(self):
+        client = Client()
+        resp = client.get(self.hall)
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/login/', resp['Location'])
+        self.assertEqual(client.get(self.board).status_code, 403)
+        User.objects.create_user('player', password='x')
+        client.login(username='player', password='x')
+        self.assertEqual(client.get(self.board).status_code, 403)
+
+    def test_rows_in_rank_order_with_shared_places(self):
+        self.fixture()
+        html = self.client.get(self.board).content.decode()
+        self.assertLess(html.index('ann'), html.index('bob'))
+        self.assertLess(html.index('bob'), html.index('dee'))
+        for text in ('Hall of fame', 'Just finished', '3 / ', '#1', '#2', '#4'):
+            self.assertIn(text, html)
+        self.assertNotIn('#3', html)
+
+    def test_no_codes_and_hidden_nick_absent_on_page_and_fragment(self):
+        codes = self.fixture()
+        services.hide_game(GameSession.objects.get(nick='cy').pk)
+        for url in (self.hall, self.board):
+            html = self.client.get(url).content.decode()
+            for code in codes:
+                self.assertNotIn(code, html)
+            self.assertNotIn('>cy<', html)
+            self.assertIn('>ann<', html)
+
+    def test_nick_is_escaped(self):
+        self.make_game(nick='<b>x</b>')
+        html = self.client.get(self.board).content.decode()
+        self.assertIn('&lt;b&gt;x&lt;/b&gt;', html)
+        self.assertNotIn('<b>x</b>', html)
+
+    def test_empty_states(self):
+        html = self.client.get(self.hall).content.decode()
+        self.assertIn('No finished games yet', html)
+        self.assertIn('Nobody has finished yet', html)
+
+    def test_fragment_is_not_cached_and_has_no_page_chrome(self):
+        resp = self.client.get(self.board)
+        self.assertIn('no-store', resp['Cache-Control'])
+        self.assertNotContains(resp, '<html')
+
+    @override_settings(HALL_REFRESH_S=7)
+    def test_page_carries_polling_config(self):
+        html = self.client.get(self.hall).content.decode()
+        self.assertIn(f'data-board-url="{self.board}"', html)
+        self.assertIn('data-refresh-ms="7000"', html)
+
+    @override_settings(HALL_TOP_N=2, HALL_RECENT_N=1)
+    def test_top_n_and_recent_n_truncate(self):
+        self.fixture()
+        html = self.client.get(self.board).content.decode()
+        for nick, shown in (('ann', True), ('bob', True), ('cy', False), ('dee', True)):
+            self.assertEqual(f'>{nick}<' in html, shown, nick)
+
+
+class ModerationTests(StaffTestCase):
+    def setUp(self):
+        super().setUp()
+        self.moderate = reverse('game:staff_moderate')
+        self.hide = reverse('game:staff_hide')
+        self.unhide = reverse('game:staff_unhide')
+        self.board = reverse('game:staff_hall_board')
+        self.ann = self.make_game(nick='ann', solved=3, attempts=5, code='111111', finished_ago=10)
+        self.bob = self.make_game(nick='bob', solved=2, attempts=4, code='222222', finished_ago=0)
+
+    def test_anonymous_and_non_staff_are_redirected_and_nothing_changes(self):
+        User.objects.create_user('player', password='x')
+        for setup in (lambda c: c.logout(), lambda c: c.login(username='player', password='x')):
+            client = Client()
+            setup(client)
+            for resp in (client.get(self.moderate), client.post(self.hide, {'game_id': self.ann.pk}),
+                         client.post(self.unhide, {'game_id': self.ann.pk})):
+                self.assertEqual(resp.status_code, 302)
+                self.assertIn('/admin/login/', resp['Location'])
+        self.assertFalse(GameSession.objects.filter(hidden_at__isnull=False).exists())
+
+    def test_page_lists_rows_with_hide_forms_and_hidden_with_unhide(self):
+        services.hide_game(self.bob.pk)
+        resp = self.client.get(self.moderate)
+        self.assertContains(resp, f'action="{self.hide}"')
+        self.assertContains(resp, f'value="{self.ann.pk}"')
+        self.assertContains(resp, f'action="{self.unhide}"')
+        self.assertContains(resp, f'value="{self.bob.pk}"')
+        self.assertContains(resp, 'Hall of fame moderation')
+        self.assertContains(self.client.get(self.moderate), 'Unhide')
+
+    def test_no_hidden_games_message(self):
+        self.assertContains(self.client.get(self.moderate), 'No hidden games')
+
+    def test_hide_then_unhide_flow(self):
+        resp = self.client.post(self.hide, {'game_id': str(self.ann.pk)}, follow=True)
+        self.assertRedirects(resp, self.moderate)
+        self.assertContains(resp, 'Hidden ann.')
+        self.assertTrue(GameSession.objects.get(pk=self.ann.pk).is_hidden)
+        self.assertNotIn('>ann<', self.client.get(self.board).content.decode())
+        resp = self.client.post(self.unhide, {'game_id': str(self.ann.pk)}, follow=True)
+        self.assertContains(resp, 'ann is back on the Hall of fame.')
+        self.assertIsNone(GameSession.objects.get(pk=self.ann.pk).hidden_at)
+        self.assertIn('>ann<', self.client.get(self.board).content.decode())
+
+    def test_second_hide_warns_and_keeps_timestamp(self):
+        self.client.post(self.hide, {'game_id': str(self.ann.pk)})
+        first = GameSession.objects.get(pk=self.ann.pk).hidden_at
+        resp = self.client.post(self.hide, {'game_id': str(self.ann.pk)}, follow=True)
+        self.assertContains(resp, 'already hidden')
+        self.assertEqual(GameSession.objects.get(pk=self.ann.pk).hidden_at, first)
+        resp = self.client.post(self.unhide, {'game_id': str(self.bob.pk)}, follow=True)
+        self.assertContains(resp, 'not hidden')
+
+    def test_unknown_and_malformed_ids_give_error_message(self):
+        for url in (self.hide, self.unhide):
+            for bad in ('not-a-uuid', '00000000-0000-0000-0000-000000000000', ''):
+                resp = self.client.post(url, {'game_id': bad}, follow=True)
+                self.assertContains(resp, 'No such game.')
+        resp = self.client.post(self.hide, {}, follow=True)
+        self.assertContains(resp, 'No such game.')
+
+    def test_post_without_csrf_token_is_forbidden(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.staff)
+        self.assertEqual(client.post(self.hide, {'game_id': str(self.ann.pk)}).status_code, 403)
+
+    def test_get_is_not_allowed_on_mutations(self):
+        self.assertEqual(self.client.get(self.hide).status_code, 405)
+
+    def test_disqualification_end_to_end_on_done(self):
+        player = Client()
+        player.post(reverse('game:start'), {'nick': 'zed'})
+        game = GameSession.objects.get(pk=player.session['game_id'])
+        GameSession.objects.filter(pk=game.pk).update(
+            code='555555', solved=1, attempts=9, last_solved_at=timezone.now(), finished_at=timezone.now())
+        self.assertContains(player.get(reverse('game:done')), '#3 of 3')
+        self.client.post(self.hide, {'game_id': str(self.ann.pk)})
+        self.assertContains(player.get(reverse('game:done')), '#2 of 2')
+        self.client.post(self.hide, {'game_id': str(game.pk)})
+        resp = player.get(reverse('game:done'))
+        self.assertContains(resp, 'not ranked')
+        self.assertContains(resp, '555555')
+
+    def test_lookup_links_to_hall_and_moderation(self):
+        resp = self.client.get(self.lookup)
+        self.assertContains(resp, f'href="{reverse("game:staff_hall")}"')
+        self.assertContains(resp, f'href="{self.moderate}"')

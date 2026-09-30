@@ -1,16 +1,20 @@
 """Staff-facing pages (prize desk). Every view requires a staff login."""
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
+from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import urlencode
 from django.utils.timesince import timesince
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from challenges import catalog
 
 from . import services
+from .models import GameSession
 
 
 def _back(code: str):
@@ -53,3 +57,56 @@ def give_prize(request):
     else:
         messages.warning(request, f'Prize was already given {timesince(game.prize_given_at)} ago.')
     return _back(game.code)
+
+
+def _board_context():
+    return {'board': services.hall_of_fame(settings.HALL_TOP_N, settings.HALL_RECENT_N),
+            'total': len(catalog.main_set())}
+
+
+@staff_member_required
+def hall(request):
+    ctx = _board_context()
+    ctx.update(board_url=reverse('game:staff_hall_board'), refresh_ms=settings.HALL_REFRESH_S * 1000)
+    return render(request, 'game/staff/hall.html', ctx)
+
+
+@never_cache
+def hall_board(request):
+    # Polled by hall.js: answer 403 (not a login redirect) so the script can detect an expired session.
+    if not (request.user.is_active and request.user.is_staff):
+        return HttpResponseForbidden('staff login required')
+    return render(request, 'game/staff/_board.html', _board_context())
+
+
+@staff_member_required
+def moderate(request):
+    ctx = _board_context()
+    ctx['hidden'] = services.hidden_games()
+    return render(request, 'game/staff/moderate.html', ctx)
+
+
+def _toggle(request, action, done_msg, noop_msg):
+    try:
+        game, changed = action(request.POST.get('game_id', ''))
+    except GameSession.DoesNotExist:
+        messages.error(request, 'No such game.')
+    else:
+        if changed:
+            messages.success(request, done_msg.format(nick=game.nick))
+        else:
+            messages.warning(request, noop_msg.format(nick=game.nick))
+    return redirect('game:staff_moderate')
+
+
+@staff_member_required
+@require_POST
+def hide(request):
+    return _toggle(request, services.hide_game, 'Hidden {nick}.', '{nick} is already hidden.')
+
+
+@staff_member_required
+@require_POST
+def unhide(request):
+    return _toggle(request, services.unhide_game, '{nick} is back on the Hall of fame.',
+                   '{nick} is not hidden.')

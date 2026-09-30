@@ -4,6 +4,7 @@
 {% block content %}
 <section class="staff">
   <h1>Prize desk</h1>
+  <p class="staff-nav"><a href="{% url 'game:staff_hall' %}">Hall of fame screen</a> · <a href="{% url 'game:staff_moderate' %}">Moderation</a></p>
   {% for message in messages %}
   <p class="notice-{% if message.level_tag == 'success' %}ok{% elif message.level_tag == 'warning' %}warn{% else %}bad{% endif %}">{{ message }}</p>
   {% endfor %}
@@ -18,7 +19,7 @@
     <p class="muted">Ask the player for their nick</p>
     <p>Solved: <strong>{{ game.solved }} / {{ total }}</strong></p>
     <p>Attempts: <strong>{{ game.attempts }}</strong></p>
-    {% if game.is_finished %}<p>Place: <strong>{% if rank %}#{{ rank.0 }} of {{ rank.1 }}{% else %}not ranked{% endif %}</strong></p>{% endif %}
+    {% if game.is_finished %}<p>Place: <strong>{% if rank %}#{{ rank.0 }} of {{ rank.1 }}{% elif game.is_hidden %}Hidden from Hall of fame (disqualified){% else %}not ranked{% endif %}</strong></p>{% endif %}
     <p>Solve time: <strong>{{ solve_time|mmss }}</strong></p>
     {% if game.is_finished %}
     <p>Finished {{ game.finished_at|timesince }} ago</p>
