@@ -180,7 +180,8 @@ def done(request):
     if not game.is_finished:
         return redirect('game:play')
     total = len(catalog.main_set())
-    place, ranked_total = services.rank_of(game)
+    rank = services.rank_of(game)
+    place, ranked_total = rank if rank else (None, None)
     return render(request, 'game/done.html', {
         'game': game,
         'total': total,

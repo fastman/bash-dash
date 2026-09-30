@@ -124,3 +124,13 @@ class MmssTests(TestCase):
         from game.templatetags.game_text import mmss
         self.assertEqual(mmss(timedelta(seconds=74, milliseconds=900)), '1:14')
         self.assertEqual(mmss(None), '—')
+
+
+class HiddenLookupTests(StaffTestCase):
+    def test_hidden_game_shows_disqualified_and_keeps_prize_button(self):
+        game = self.make_game()
+        services.hide_game(game.pk)
+        resp = self.client.get(self.lookup, {'code': CODE})
+        self.assertContains(resp, 'Hidden from Hall of fame (disqualified)')
+        self.assertContains(resp, 'Mark prize given')
+        self.assertNotContains(resp, 'not ranked')

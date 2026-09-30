@@ -428,15 +428,15 @@ Each refresh (once per `HALL_REFRESH_S`, one screen) runs the bulk `expire_overd
 
 #### Automated
 
-- [ ] 1.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
-- [ ] 1.2 Django checks pass: `uv run python manage.py check`
-- [ ] 1.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
-- [ ] 1.4 Migration applies to the existing dev DB: `uv run python manage.py migrate`
+- [x] 1.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
+- [x] 1.2 Django checks pass: `uv run python manage.py check`
+- [x] 1.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
+- [x] 1.4 Migration applies to the existing dev DB: `uv run python manage.py migrate`
 
 #### Manual
 
-- [ ] 1.5 Admin shows the hidden-at column and filter and stays read-only
-- [ ] 1.6 Hidden game: `/done` shows "not ranked" and code; staff lookup shows "disqualified"
+- [x] 1.5 Admin shows the hidden-at column and filter and stays read-only
+- [x] 1.6 Hidden game: `/done` shows "not ranked" and code; staff lookup shows "disqualified"
 
 ### Phase 2: Hall of fame screen
 

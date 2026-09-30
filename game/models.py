@@ -17,6 +17,7 @@ class GameSession(models.Model):
     a timed-out game keeps its ``current_slug``.
     ``code`` is the unique 6-digit prize code shown on the summary page.
     ``prize_given_at`` is set once, when booth staff hand out the prize.
+    ``hidden_at`` is set when staff hide (disqualify) the game: it leaves the ranking, result untouched.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -32,6 +33,7 @@ class GameSession(models.Model):
     finished_at = models.DateTimeField(null=True)
     code = models.CharField(max_length=6, unique=True, editable=False, default=generate_code)
     prize_given_at = models.DateTimeField(null=True, blank=True, editable=False)
+    hidden_at = models.DateTimeField(null=True, blank=True, editable=False, db_index=True)
 
     def __str__(self):
         return f'{self.nick} ({self.id})'
@@ -43,6 +45,10 @@ class GameSession(models.Model):
     @property
     def prize_given(self) -> bool:
         return self.prize_given_at is not None
+
+    @property
+    def is_hidden(self) -> bool:
+        return self.hidden_at is not None
 
     @property
     def timed_out(self) -> bool:
