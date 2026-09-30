@@ -7,23 +7,28 @@ Transaction discipline: never hold a DB transaction open across ``run_command``
 then one short ``transaction.atomic()`` for the Attempt + conditional updates.
 """
 
+import hashlib
+import hmac
 import logging
 import re
 import threading
 from dataclasses import dataclass
 from datetime import timedelta
+from urllib.parse import quote
 
+import segno
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import DurationField, ExpressionWrapper, F, Q
 from django.db.models.functions import Coalesce, Least
+from django.urls import reverse
 from django.utils import timezone
 
 from challenges import catalog, sandbox
 from challenges.catalog import Challenge
 
-from .models import Attempt, GameSession, generate_code
+from .models import Attempt, GameSession, GateSettings, generate_code
 
 logger = logging.getLogger('game')
 
@@ -319,3 +324,80 @@ def solve_time(game: GameSession) -> timedelta | None:
     if game.last_solved_at is None:
         return None
     return game.last_solved_at - game.started_at
+
+
+# QR start gate (S-06)
+TOKEN_OK = 'ok'
+TOKEN_MISSING = 'missing'
+TOKEN_INVALID = 'invalid'
+TOKEN_EXPIRED = 'expired'
+TOKEN_TTL_MIN_S = 120
+TOKEN_TTL_MAX_S = 86400
+_TOKEN_SALT = 'game.start-token'
+TOKEN_DIGITS = 6
+
+
+def gate_settings() -> GateSettings:
+    # Seed within the staff bounds, so a stray env value cannot close the gate or show odd minutes.
+    seed = settings.START_TOKEN_TTL_S
+    if seed:
+        seed = min(max(seed, TOKEN_TTL_MIN_S), TOKEN_TTL_MAX_S)
+    return GateSettings.objects.get_or_create(pk=1, defaults={'token_ttl_s': seed})[0]
+
+
+def set_token_ttl(ttl_s: int) -> GateSettings:
+    if ttl_s != 0 and not TOKEN_TTL_MIN_S <= ttl_s <= TOKEN_TTL_MAX_S:
+        raise ValueError(f'ttl must be 0 or {TOKEN_TTL_MIN_S}-{TOKEN_TTL_MAX_S} seconds')
+    obj = gate_settings()
+    obj.token_ttl_s = ttl_s
+    obj.save()
+    return obj
+
+
+def _epoch(now) -> int:
+    return int((now or timezone.now()).timestamp())
+
+
+def _code_for_bucket(bucket: int) -> str:
+    digest = hmac.new(settings.SECRET_KEY.encode(), f'{_TOKEN_SALT}:{bucket}'.encode(), hashlib.sha256).digest()
+    return f'{int.from_bytes(digest[:8], "big") % 10 ** TOKEN_DIGITS:0{TOKEN_DIGITS}d}'
+
+
+def normalize_token(token) -> str:
+    """Drop whitespace so a code typed as "123 456" matches."""
+    return ''.join((token or '').split())
+
+
+def issue_start_token(now=None) -> str:
+    """Six-digit code, stable within one rotation period. With no expiry (ttl 0) it never rotates."""
+    if gate_settings().token_ttl_s == 0:
+        return _code_for_bucket(0)
+    return _code_for_bucket(_epoch(now) // settings.START_TOKEN_ROTATE_S)
+
+
+def check_start_token(token, now=None) -> str:
+    token = normalize_token(token)
+    if not token:
+        return TOKEN_MISSING
+    ttl = gate_settings().token_ttl_s
+    if ttl == 0:
+        return TOKEN_OK if hmac.compare_digest(token, _code_for_bucket(0)) else TOKEN_INVALID
+    rotate = settings.START_TOKEN_ROTATE_S
+    current = _epoch(now) // rotate
+    # Scan back past the longest lifetime staff can set, to tell "expired" from "wrong".
+    for bucket in range(current, current - TOKEN_TTL_MAX_S // rotate - 2, -1):
+        if hmac.compare_digest(token, _code_for_bucket(bucket)):
+            return TOKEN_EXPIRED if _epoch(now) - bucket * rotate > ttl else TOKEN_OK
+    return TOKEN_INVALID
+
+
+def start_url(request, token: str) -> str:
+    path = f'{reverse("game:home")}?t={quote(token)}'
+    if settings.PUBLIC_BASE_URL:
+        return f'{settings.PUBLIC_BASE_URL}{path}'
+    return request.build_absolute_uri(path)
+
+
+def qr_svg(url: str) -> str:
+    """Inline, viewBox-only SVG. Always dark on white: scanners need contrast in any theme."""
+    return segno.make(url, error='m').svg_inline(omitsize=True, border=2, dark='#000', light='#fff')

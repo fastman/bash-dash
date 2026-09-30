@@ -8,6 +8,16 @@
   <p class="notice-{% if message.level_tag == 'success' %}ok{% elif message.level_tag == 'warning' %}warn{% else %}bad{% endif %}">{{ message }}</p>
   {% endfor %}
 
+  <h2>Start QR</h2>
+  {% if token_never_expires %}<p class="notice-warn">QR codes never expire — anyone with an old code or photo can start a game.</p>{% endif %}
+  <form method="post" action="{% url 'game:staff_token_ttl' %}" class="mod-row">
+    {% csrf_token %}
+    <label for="minutes">Lifetime (min)</label>
+    <input id="minutes" name="minutes" type="number" min="0" max="1440" inputmode="numeric" required value="{{ token_ttl_min }}">
+    <button type="submit">Save</button>
+  </form>
+  <p class="muted">0 = never expires</p>
+
   <h2>On screen: top {{ board.top|length }}</h2>
   {% for r in board.top %}
   <form method="post" action="{% url 'game:staff_hide' %}" class="mod-row">

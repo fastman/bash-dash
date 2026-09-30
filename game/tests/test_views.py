@@ -31,7 +31,7 @@ class ViewTestCase(TestCase):
         self.order = catalog.main_set()
 
     def start(self, nick='neo'):
-        return self.client.post(reverse('game:start'), {'nick': nick})
+        return self.client.post(reverse('game:start'), {'nick': nick, 't': services.issue_start_token()})
 
     def game(self):
         return GameSession.objects.get(pk=self.client.session['game_id'])
@@ -43,7 +43,7 @@ class ViewTestCase(TestCase):
 
 class HomeAndStartTests(ViewTestCase):
     def test_home_renders_rules_and_nick_form(self):
-        resp = self.client.get(reverse('game:home'))
+        resp = self.client.get(reverse('game:home'), {'t': services.issue_start_token()})
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'name="nick"')
         self.assertContains(resp, 'maxlength="20"')
@@ -70,10 +70,78 @@ class HomeAndStartTests(ViewTestCase):
         self.assertEqual(GameSession.objects.count(), 1)
 
 
+class GateTests(ViewTestCase):
+    def expired_token(self):
+        return services.issue_start_token(timezone.now() - timedelta(seconds=services.gate_settings().token_ttl_s + 120))
+
+    def test_home_without_token_is_refused(self):
+        resp = self.client.get(reverse('game:home'))
+        self.assertEqual(resp.status_code, 403)
+        self.assertContains(resp, 'Scan the QR code at the booth to play', status_code=403)
+        self.assertNotContains(resp, 'name="nick"', status_code=403)
+        self.assertNotContains(resp, 'has expired', status_code=403)
+
+    def test_refusal_page_has_manual_code_form(self):
+        resp = self.client.get(reverse('game:home'))
+        self.assertContains(resp, 'name="t"', status_code=403)
+        self.assertContains(resp, 'method="get"', status_code=403)
+
+    def test_home_with_wrong_code_says_invalid(self):
+        resp = self.client.get(reverse('game:home'), {'t': '000000' if services.issue_start_token() != '000000' else '111111'})
+        self.assertContains(resp, 'That code is not valid.', status_code=403)
+
+    def test_manually_typed_code_with_space_opens_form(self):
+        token = services.issue_start_token()
+        resp = self.client.get(reverse('game:home'), {'t': f'{token[:3]} {token[3:]}'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f'name="t" value="{token}"')
+
+    def test_home_with_expired_token_says_expired(self):
+        resp = self.client.get(reverse('game:home'), {'t': self.expired_token()})
+        self.assertContains(resp, 'That code has expired.', status_code=403)
+
+    def test_home_with_valid_token_carries_it_in_hidden_field(self):
+        token = services.issue_start_token()
+        resp = self.client.get(reverse('game:home'), {'t': token})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f'<input type="hidden" name="t" value="{token}">', html=True)
+
+    def test_start_without_or_with_expired_token_creates_no_game(self):
+        for data in ({'nick': 'neo'}, {'nick': 'neo', 't': self.expired_token()}, {'nick': 'neo', 't': 'junk'}):
+            resp = self.client.post(reverse('game:start'), data)
+            self.assertEqual(resp.status_code, 403)
+        self.assertEqual(GameSession.objects.count(), 0)
+
+    def test_token_expiring_between_scan_and_start_is_refused(self):
+        token = services.issue_start_token()
+        ttl = services.gate_settings().token_ttl_s
+        later = timezone.now() + timedelta(seconds=ttl + 120)
+        with mock.patch.object(timezone, 'now', return_value=later):
+            resp = self.client.post(reverse('game:start'), {'nick': 'neo', 't': token})
+        self.assertContains(resp, 'That code has expired.', status_code=403)
+        self.assertEqual(GameSession.objects.count(), 0)
+
+    def test_nick_error_keeps_token(self):
+        token = services.issue_start_token()
+        resp = self.client.post(reverse('game:start'), {'nick': ' ', 't': token})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'class="error"')
+        self.assertContains(resp, f'name="t" value="{token}"')
+
+    def test_player_with_game_resumes_without_token(self):
+        self.start()
+        self.assertRedirects(self.client.get(reverse('game:home')), reverse('game:play'))
+        self.assertRedirects(self.client.post(reverse('game:start'), {'nick': 'x'}), reverse('game:play'))
+        GameSession.objects.filter(pk=self.game().pk).update(current_slug=None, finished_at=timezone.now())
+        self.assertRedirects(self.client.get(reverse('game:home')), reverse('game:done'))
+
+
 class PlayTests(ViewTestCase):
     def test_play_without_game_redirects_home(self):
-        self.assertRedirects(self.client.get(reverse('game:play')), reverse('game:home'))
-        self.assertRedirects(self.client.get(reverse('game:done')), reverse('game:home'))
+        self.assertRedirects(self.client.get(reverse('game:play')), reverse('game:home'),
+                             fetch_redirect_response=False)
+        self.assertRedirects(self.client.get(reverse('game:done')), reverse('game:home'),
+                             fetch_redirect_response=False)
 
     def test_play_shows_first_challenge_of_total(self):
         self.start()
@@ -221,7 +289,7 @@ class DockerDownTests(TestCase):
         reap = mock.patch.object(sandbox, 'reap_stale_once')
         reap.start()
         self.addCleanup(reap.stop)
-        self.client.post(reverse('game:start'), {'nick': 'neo'})
+        self.client.post(reverse('game:start'), {'nick': 'neo', 't': services.issue_start_token()})
 
     def test_daemon_unreachable_returns_json_503_and_is_not_counted(self):
         for exc in (docker.errors.DockerException('no socket'), requests.exceptions.ConnectionError('gone')):
@@ -249,7 +317,9 @@ class CsrfTests(ViewTestCase):
 
 class NoAnswerLinksTests(ViewTestCase):
     def test_pages_contain_no_external_links(self):
-        pages = [self.client.get(reverse('game:home')).content]
+        token = services.issue_start_token()
+        pages = [self.client.get(reverse('game:home')).content,
+                 self.client.get(reverse('game:home'), {'t': token}).content]
         self.start()
         pages.append(self.client.get(reverse('game:play')).content)
         GameSession.objects.filter(pk=self.game().pk).update(current_slug=self.order[-1].slug)
@@ -365,9 +435,11 @@ class TimerAndDoneUiTests(ViewTestCase):
         self.assertNotContains(resp, 'up!')
 
     def test_home_duration_follows_setting(self):
-        self.assertContains(self.client.get(reverse('game:home')), '5 minutes')
+        home = reverse('game:home')
+        token = services.issue_start_token()
+        self.assertContains(self.client.get(home, {'t': token}), '5 minutes')
         with override_settings(GAME_DURATION_S=120):
-            self.assertContains(self.client.get(reverse('game:home')), '2 minutes')
+            self.assertContains(self.client.get(home, {'t': token}), '2 minutes')
 
 
 class SummaryTests(ViewTestCase):
@@ -394,7 +466,8 @@ class SummaryTests(ViewTestCase):
         self.assertNotContains(self.client.get(reverse('game:state')), self.CODE)
 
     def test_done_redirects_still_hold(self):
-        self.assertRedirects(self.client.get(reverse('game:done')), reverse('game:home'))
+        self.assertRedirects(self.client.get(reverse('game:done')), reverse('game:home'),
+                             fetch_redirect_response=False)
         self.start()
         self.assertRedirects(self.client.get(reverse('game:done')), reverse('game:play'))
 

@@ -75,3 +75,10 @@ class Attempt(models.Model):
 
     def __str__(self):
         return f'{self.slug}: {self.command[:40]}'
+
+
+class GateSettings(models.Model):
+    """Staff-editable QR start gate settings. Singleton: the only row is ``pk=1``."""
+
+    token_ttl_s = models.PositiveIntegerField()  # 0 = tokens never expire
+    updated_at = models.DateTimeField(auto_now=True)

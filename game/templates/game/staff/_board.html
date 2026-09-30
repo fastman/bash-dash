@@ -18,3 +18,8 @@
   </ol>
   {% else %}<p class="muted">Nobody has finished yet</p>{% endif %}
 </section>
+<section class="hall-qr">
+  <div class="qr-tile">{{ qr_svg|safe }}</div>
+  <p class="qr-caption">Scan to play</p>
+  <p class="qr-code">{{ start_code }}</p>
+</section>

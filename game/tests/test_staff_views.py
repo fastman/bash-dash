@@ -1,8 +1,9 @@
+import re
 from datetime import timedelta
 from unittest import mock
 
 from django.contrib.auth.models import User
-from django.test import Client, TestCase, override_settings
+from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -281,7 +282,7 @@ class ModerationTests(StaffTestCase):
 
     def test_disqualification_end_to_end_on_done(self):
         player = Client()
-        player.post(reverse('game:start'), {'nick': 'zed'})
+        player.post(reverse('game:start'), {'nick': 'zed', 't': services.issue_start_token()})
         game = GameSession.objects.get(pk=player.session['game_id'])
         GameSession.objects.filter(pk=game.pk).update(
             code='555555', solved=1, attempts=9, last_solved_at=timezone.now(), finished_at=timezone.now())
@@ -297,3 +298,101 @@ class ModerationTests(StaffTestCase):
         resp = self.client.get(self.lookup)
         self.assertContains(resp, f'href="{reverse("game:staff_hall")}"')
         self.assertContains(resp, f'href="{self.moderate}"')
+
+
+class QrTests(StaffTestCase):
+    def setUp(self):
+        super().setUp()
+        self.hall = reverse('game:staff_hall')
+        self.board = reverse('game:staff_hall_board')
+
+    def qr_svg(self, url=None):
+        html = self.client.get(url or self.board).content.decode()
+        return re.search(r'<svg.*?</svg>', html, re.S).group(0)
+
+    def test_hall_and_board_show_qr(self):
+        for url in (self.hall, self.board):
+            html = self.client.get(url).content.decode()
+            self.assertIn('<svg', html)
+            self.assertIn('Scan to play', html)
+
+    def test_qr_is_stable_within_period_and_changes_next(self):
+        rotate = 60
+        start = timezone.now().replace(microsecond=0)
+        start -= timedelta(seconds=int(start.timestamp()) % rotate)
+        with mock.patch.object(timezone, 'now', return_value=start):
+            first = self.qr_svg()
+        with mock.patch.object(timezone, 'now', return_value=start + timedelta(seconds=rotate - 1)):
+            self.assertEqual(self.qr_svg(), first)
+        with mock.patch.object(timezone, 'now', return_value=start + timedelta(seconds=rotate)):
+            self.assertNotEqual(self.qr_svg(), first)
+
+    def test_board_shows_code_under_qr(self):
+        token = services.issue_start_token()
+        resp = self.client.get(reverse('game:staff_hall_board'))
+        self.assertContains(resp, f'{token[:3]} {token[3:]}')
+
+    def test_start_url_uses_public_base_url_and_token_is_valid(self):
+        token = services.issue_start_token()
+        request = RequestFactory().get('/')
+        self.assertEqual(services.check_start_token(token), services.TOKEN_OK)
+        with override_settings(PUBLIC_BASE_URL='https://dash.example'):
+            url = services.start_url(request, token)
+        self.assertTrue(url.startswith('https://dash.example/?t='))
+        self.assertTrue(services.start_url(request, token).startswith('http://testserver/?t='))
+
+    def test_board_is_forbidden_for_non_staff(self):
+        for setup in (lambda c: c.logout(), lambda c: c.force_login(User.objects.create_user('p', password='x'))):
+            client = Client()
+            setup(client)
+            resp = client.get(self.board)
+            self.assertEqual(resp.status_code, 403)
+            self.assertNotIn(b'<svg', resp.content)
+
+
+class TokenTtlTests(StaffTestCase):
+    def setUp(self):
+        super().setUp()
+        self.url = reverse('game:staff_token_ttl')
+        self.moderate = reverse('game:staff_moderate')
+
+    def test_valid_minutes_are_saved(self):
+        resp = self.client.post(self.url, {'minutes': '5'}, follow=True)
+        self.assertRedirects(resp, self.moderate)
+        self.assertEqual(services.gate_settings().token_ttl_s, 300)
+        self.assertContains(resp, 'QR codes now expire after 5 min.')
+
+    def test_zero_means_never_and_shows_warning(self):
+        resp = self.client.post(self.url, {'minutes': '0'}, follow=True)
+        self.assertContains(resp, 'QR codes now never expire.')
+        self.assertContains(resp, 'QR codes never expire')
+        self.assertEqual(services.gate_settings().token_ttl_s, 0)
+
+    def test_invalid_values_leave_ttl_unchanged(self):
+        before = services.gate_settings().token_ttl_s
+        for bad in ('1', 'abc', '-3', '1441', ''):
+            resp = self.client.post(self.url, {'minutes': bad}, follow=True)
+            self.assertContains(resp, 'Enter 0 or 2–1440 minutes.')
+        self.assertEqual(services.gate_settings().token_ttl_s, before)
+
+    def test_access_rules(self):
+        anon = Client()
+        resp = anon.post(self.url, {'minutes': '5'})
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/login/', resp['Location'])
+        csrf = Client(enforce_csrf_checks=True)
+        csrf.force_login(self.staff)
+        self.assertEqual(csrf.post(self.url, {'minutes': '5'}).status_code, 403)
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_moderate_shows_current_minutes(self):
+        html = self.client.get(self.moderate).content.decode()
+        self.assertRegex(html, r'name="minutes"[^>]*value="15"')
+        self.assertNotIn('QR codes never expire', html)
+
+
+class QrSvgTests(TestCase):
+    def test_qr_svg_is_inline_svg_with_viewbox(self):
+        svg = services.qr_svg('https://dash.example/?t=abc')
+        self.assertTrue(svg.startswith('<svg'))
+        self.assertIn('viewBox', svg)

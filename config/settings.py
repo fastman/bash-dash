@@ -155,3 +155,10 @@ GAME_DURATION_S = int(os.environ.get('BASHDASH_GAME_DURATION_S', 300))
 HALL_TOP_N = max(1, int(os.environ.get('BASHDASH_HALL_TOP_N', 10)))
 HALL_RECENT_N = max(1, int(os.environ.get('BASHDASH_HALL_RECENT_N', 5)))
 HALL_REFRESH_S = max(1, int(os.environ.get('BASHDASH_HALL_REFRESH_S', 5)))
+
+# QR start gate (S-06)
+# START_TOKEN_TTL_S only seeds the staff-editable GateSettings row (0 = tokens never expire).
+START_TOKEN_TTL_S = max(0, int(os.environ.get('BASHDASH_START_TOKEN_TTL_S', 900)))
+# Keep this at most half the smallest TTL staff will use, so a freshly shown QR has life left.
+START_TOKEN_ROTATE_S = max(10, int(os.environ.get('BASHDASH_START_TOKEN_ROTATE_S', 60)))
+PUBLIC_BASE_URL = os.environ.get('BASHDASH_PUBLIC_URL', '').rstrip('/')

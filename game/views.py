@@ -81,12 +81,26 @@ def _redirect_existing(game: GameSession):
     return redirect('game:done' if game.is_finished else 'game:play')
 
 
+def _gate_refusal(request, token):
+    """403 refusal page when ``token`` is not a valid start token, else None."""
+    status = services.check_start_token(token)
+    if status == services.TOKEN_OK:
+        return None
+    return render(request, 'game/gate.html', {
+        'expired': status == services.TOKEN_EXPIRED, 'invalid': status == services.TOKEN_INVALID,
+        'code': token, 'digits': services.TOKEN_DIGITS}, status=403)
+
+
 @require_GET
 def home(request):
     game = _session_game(request)
     if game:
         return _redirect_existing(game)
-    return render(request, 'game/home.html', {'duration': settings.GAME_DURATION_S})
+    token = services.normalize_token(request.GET.get('t'))
+    refusal = _gate_refusal(request, token)
+    if refusal:
+        return refusal
+    return render(request, 'game/home.html', {'duration': settings.GAME_DURATION_S, 'token': token})
 
 
 @require_POST
@@ -94,12 +108,16 @@ def start(request):
     game = _session_game(request)
     if game:
         return _redirect_existing(game)
+    token = services.normalize_token(request.POST.get('t'))
+    refusal = _gate_refusal(request, token)
+    if refusal:
+        return refusal
     nick = request.POST.get('nick', '')
     try:
         game = services.start_game(nick)
     except ValueError:
         return render(request, 'game/home.html', {
-            'duration': settings.GAME_DURATION_S,
+            'duration': settings.GAME_DURATION_S, 'token': token,
             'error': f'Enter a nick of 1-{services.NICK_MAX_CHARS} characters.', 'nick': nick})
     request.session['game_id'] = str(game.pk)
     return redirect('game:play')
