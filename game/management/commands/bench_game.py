@@ -46,7 +46,7 @@ class Command(BaseCommand):
         parser.add_argument('--mix', choices=['typical', 'with-abuse'], default='typical',
                             help='typical: alternate wrong answers and correct examples; '
                                  f'with-abuse: player 0 sends {ABUSE_COMMAND!r} every time')
-        parser.add_argument('--keep', action='store_true', help='keep the bench-* games afterwards')
+        parser.add_argument('--keep', action='store_true', help='keep the bench_* games afterwards')
 
     def handle(self, *args, players, commands, mix, keep, **options):
         lock = threading.Lock()
@@ -59,7 +59,7 @@ class Command(BaseCommand):
             nonlocal lock_errors
             abuser = mix == 'with-abuse' and i == 0
             try:
-                game = services.start_game(f'bench-{i}')
+                game = services.start_game(f'bench_{i}')
                 with lock:
                     game_ids.append(game.pk)
                 for k in range(commands):

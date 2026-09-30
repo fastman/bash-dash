@@ -40,11 +40,11 @@ class BenchGameTests(TransactionTestCase):
         out = self.bench('--players', '1', '--commands', '6')
         for needle in ('p50', 'p95', 'max', 'ran: 6', 'database is locked: 0'):
             self.assertIn(needle, out)
-        self.assertFalse(GameSession.objects.filter(nick__startswith='bench-').exists())
+        self.assertFalse(GameSession.objects.filter(nick__startswith='bench_').exists())
 
     def test_typical_mix_solves_some_and_misses_some(self):
         self.bench('--players', '1', '--commands', '6', '--keep')
-        game = GameSession.objects.get(nick__startswith='bench-')
+        game = GameSession.objects.get(nick__startswith='bench_')
         self.assertEqual(game.attempts, 6)
         self.assertGreater(game.solved, 0)
         self.assertLess(game.solved, 6)
