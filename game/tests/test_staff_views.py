@@ -343,6 +343,20 @@ class QrTests(StaffTestCase):
         self.assertTrue(url.startswith('https://dash.example/?t='))
         self.assertTrue(services.start_url(request, token).startswith('http://testserver/?t='))
 
+    def test_start_url_follows_the_reverse_proxy_headers(self):
+        token = services.issue_start_token()
+        headers = {'HTTP_X_FORWARDED_HOST': 'dash.example', 'HTTP_X_FORWARDED_PROTO': 'https'}
+        with override_settings(
+            USE_X_FORWARDED_HOST=True,
+            SECURE_PROXY_SSL_HEADER=('HTTP_X_FORWARDED_PROTO', 'https'),
+            ALLOWED_HOSTS=['dash.example', 'testserver'],
+        ):
+            url = services.start_url(RequestFactory().get('/', **headers), token)
+        self.assertTrue(url.startswith('https://dash.example/?t='), url)
+        # Flag off (the default): the headers are ignored, not honoured — http and the inner host.
+        url = services.start_url(RequestFactory().get('/', **headers), token)
+        self.assertTrue(url.startswith('http://testserver/?t='), url)
+
     def test_board_is_forbidden_for_non_staff(self):
         for setup in (lambda c: c.logout(), lambda c: c.force_login(User.objects.create_user('p', password='x'))):
             client = Client()

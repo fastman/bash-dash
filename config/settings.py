@@ -32,6 +32,13 @@ DEBUG = os.environ.get('BASHDASH_DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
 ALLOWED_HOSTS = [h for h in os.environ.get('BASHDASH_ALLOWED_HOSTS', '').split(',') if h]
 
+# Reverse proxy (nginx, Caddy, Traefik) in front of the app, terminating TLS.
+# X-Forwarded-Host then picks the host used in redirects, the CSRF origin check and the QR
+# code; X-Forwarded-Proto tells the app the client spoke https. Turn it on only when the
+# proxy overwrites both headers — a client that could set them would pick its own host.
+USE_X_FORWARDED_HOST = os.environ.get('BASHDASH_USE_X_FORWARDED_HOST', 'False').lower() in ('1', 'true', 'yes')
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if USE_X_FORWARDED_HOST else None
+
 
 # Application definition
 

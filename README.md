@@ -37,3 +37,24 @@ Przydatne: `docker compose logs -f app`, `docker compose up -d --build` po zmian
 
 Aplikacja montuje `/var/run/docker.sock` hosta (tak uruchamia sandbox) — to dostęp równoważny rootowi
 na hoście. Ruch idzie po zwykłym HTTP. Używaj tylko w zaufanej sieci i tylko do demo.
+
+## HTTPS za reverse proxy
+
+Jeśli aplikacja stoi za revproxy (nginx, Caddy, Traefik), który kończy TLS, włącz w `.env`:
+
+```sh
+BASHDASH_USE_X_FORWARDED_HOST=true
+```
+
+Od tego momentu host nagłówka `X-Forwarded-Host` trafia do przekierowań, sprawdzenia origin w CSRF
+i adresu w QR kodzie, a `X-Forwarded-Proto` sprawia, że ten adres wychodzi po `https`.
+Warunki po stronie proxy:
+
+- nagłówki muszą być **nadpisywane**, nie doklejane — klient, który może je wysłać sam, wskazałby
+  własną domenę,
+- `X-Forwarded-Host` musi zawierać port, jeśli publiczny port to nie 443,
+- `BASHDASH_ALLOWED_HOSTS` musi wymieniać publiczną domenę (to ją Django sprawdza),
+- `BASHDASH_PUBLIC_URL` można zostawić puste — QR i tak wyjdzie po `https`.
+
+Bez tego przełącznika nagłówki są ignorowane, a QR kod i przekierowania wskazują wewnętrzny adres
+kontenera (`http://<IP>:8000`).
