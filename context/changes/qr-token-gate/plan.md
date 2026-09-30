@@ -8,7 +8,7 @@ A player can only start a game after scanning the current, rotating QR code on t
 
 - `views.home` (`game/views.py:84-90`) renders the rules and nick form for anyone without a game in the session. `views.start` (`game/views.py:92-106`) creates a game from any POST with a valid nick. Nothing checks where the player came from.
 - Both views first call `_session_game()` and redirect a player who already has a game to `/play` or `/done` (`_redirect_existing`, `game/views.py:80`). Resume after refresh (FR-006) depends on this ordering.
-- `services.start_game(nick)` (`game/services.py:73`) is also called directly by `bench_game` (`game/management/commands/bench_game.py:62`) and by `game/tests/test_integration.py:21`. A gate at the view level leaves both unaffected.
+- `services.start_game(nick)` (`game/services.py:76`) is also called directly by `bench_game` (`game/management/commands/bench_game.py:62`) and by `game/tests/test_integration.py:21`. A gate at the view level leaves both unaffected.
 - S-05 left an empty `{% block qr %}` slot in `game/templates/game/staff/hall.html:10`, outside the polled `#board`. `hall.js` swaps `#board`'s innerHTML with `/staff/hall/board` every `HALL_REFRESH_S` (5 s). That endpoint returns 403 (not a login redirect) when the staff session has expired (`staff_views.hall_board`, `game/staff_views.py:74-79`).
 - `/staff/moderate` (`game/templates/game/staff/moderate.html`) is the phone-sized control page for the screen. It uses POST + CSRF + `messages` + Post/Redirect/Get, the house pattern for staff mutations (`staff_views._toggle`).
 - Settings follow the `BASHDASH_*` env var pattern (`config/settings.py:143-152`). No setting can be changed at runtime yet. The PRD requires staff (not the operator) to set the token TTL.
@@ -57,7 +57,7 @@ The TTL is checked at `POST /start`, not only when the QR is scanned. The PRD sa
 ## Critical Implementation Details
 
 - **Order in the views.** `home` and `start`: (1) `_session_game()` → redirect if a game exists; (2) check the token → 403 refusal page if not valid; (3) the existing behaviour. A nick validation error on `start` re-renders the form with the same `t`, so the player does not have to rescan.
-- **Deterministic token per rotation period.** Issue time = `floor(now_epoch / START_TOKEN_ROTATE_S) * START_TOKEN_ROTATE_S`, signed with `signing.Signer(salt='game.start-token')` (keyword args only in Django 6). Do not use `TimestampSigner`: it stamps the current second, so the QR would change on every 5 s poll. Check it with `unsign()`, parse an int, and compute `age = now_epoch − issued`. Treat `age < −START_TOKEN_ROTATE_S` (issued in the future) as invalid. With TTL > 0, treat `age > ttl` as expired.
+- **Deterministic token per rotation period.** Issue time = `floor(now_epoch / START_TOKEN_ROTATE_S) * START_TOKEN_ROTATE_S`, signed with `signing.Signer(salt='game.start-token')` (keyword args only in Django 6). Do not use `TimestampSigner`: it stamps the current second, so the QR would change on every 5 s poll. Check it with `unsign()`, parse an int, and compute `age = now_epoch − issued`. Use `now_epoch = int((now or timezone.now()).timestamp())`, the `services` clock convention, so that tests which mock `timezone.now` or pass `now` control both issuing and checking. Do not use `time.time()`. Treat `age < −START_TOKEN_ROTATE_S` (issued in the future) as invalid. With TTL > 0, treat `age > ttl` as expired.
 - **TTL floor.** Staff input is limited to 0 or ≥ 2 min so that, with the 60 s default rotation, a freshly displayed token always has at least 1 min of life. If the operator raises `BASHDASH_START_TOKEN_ROTATE_S`, they must keep it at most half the smallest TTL staff will use. Note this next to the setting.
 
 ## Phase 1: Token rules and player gate
@@ -123,6 +123,10 @@ Tokens can be issued and checked, the lifetime is stored in the DB, and the play
 
 **Contract**:
 - `ViewTestCase.start(nick)` posts `t=services.issue_start_token()`. `test_home_renders_rules_and_nick_form` requests `/?t=<token>`.
+- Other existing tests that reach `/` or `/start` without a token and must be updated (they break under the gate):
+  - `test_views.py` `PlayTests.test_play_without_game_redirects_home` and `SummaryTests.test_done_redirects_still_hold`. `assertRedirects(..., reverse('game:home'))` fetches `/` and expects 200, but it now gets 403. Pass `fetch_redirect_response=False`.
+  - `test_views.py` `test_home_duration_follows_setting` and `NoAnswerLinksTests.test_pages_contain_no_external_links` should GET `/?t=<token>`. Also keep the tokenless gate page in the no-external-links list.
+  - `test_views.py` `DockerDownTests.setUp` and `test_staff_views.py` `test_disqualification_end_to_end_on_done` post `/start` directly. Add `'t': services.issue_start_token()`.
 - Service tests (with an injected `now`): a fresh token is `TOKEN_OK`; the same period gives an identical token and the next period a different one; `ttl + 1` s old → `TOKEN_EXPIRED`; exactly `ttl` old → OK; TTL 0 → a very old token is OK; a tampered signature, a garbage string, `None` or `''` give `TOKEN_INVALID` or `TOKEN_MISSING`; a future issue time → `TOKEN_INVALID`; lowering the TTL expires an already-issued token (retroactive); `set_token_ttl` rejects 1, 119, 86401 and −1, and accepts 0, 120 and 86400; `gate_settings()` seeds from `START_TOKEN_TTL_S` (`override_settings`).
 - View tests: `GET /` without `t` → 403 with the scan message, no nick field; expired `t` → 403 with "expired"; valid `t` → 200 with a hidden `t` field; `POST /start` without, or with an expired, `t` → 403 and `GameSession.objects.count() == 0`; a token valid at `GET /` but expired by the POST (mock `timezone.now`) → 403; nick error with a valid `t` → 200, the error shown and `t` preserved; a player with an active game hitting `/` or `/start` with no token → still redirected to `/play` (resume unaffected); a finished game → `/done`.
 
@@ -162,7 +166,7 @@ The big screen shows a scannable, rotating QR. Staff can change the token lifeti
 
 #### 2. QR rendering service
 
-**File**: `game/services.py` (or a small `game/qr.py` if the implementer prefers to keep `services` free of presentation code)
+**File**: `game/services.py` (the tests below reference `services.start_url` and `services.qr_svg`)
 
 **Intent**: Build the absolute start URL for the current token and render it as inline SVG.
 
@@ -175,7 +179,7 @@ The big screen shows a scannable, rotating QR. Staff can change the token lifeti
 **Intent**: Put the QR into the polled board, so it rotates through the existing 5 s poll and inherits its auth and error handling. Remove the unused S-05 slot.
 
 **Contract**:
-- `_board_context(request)` gains `qr_svg` (from `issue_start_token()` → `start_url` → `qr_svg`). Both `hall` and `hall_board` pass `request`. `moderate` does not need the QR, so either give it a flag or build the QR only in the two hall views.
+- `_board_context()` stays as it is, because `moderate` uses it and needs no QR. A new `_hall_context(request)` returns `_board_context()` plus `qr_svg` (from `issue_start_token()` → `start_url` → `qr_svg`). `hall` and `hall_board` use `_hall_context(request)`.
 - `_board.html` adds a `<section class="hall-qr">` with the SVG (`|safe`, since we generated it) and a caption "Scan to play". The moderation page includes a different template, so it is unaffected.
 - `hall.html`: remove `{% block qr %}{% endblock %}`.
 - CSS: `#board` becomes a three-column grid (ranking, recent, QR), or the QR sits at the top of the recent column. The implementer picks whichever fits 1366×768 without scrolling. The QR is at least ~35 vh tall, on a white tile with a quiet zone. Below 900 px it stacks like the existing columns.
