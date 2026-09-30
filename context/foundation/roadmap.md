@@ -45,7 +45,7 @@ techniczna (integracja, utwardzenie, ok. 6 s na komendę).
 | S-03 | summary-with-prize-code       | gracz po zakończeniu gry widzi liczbę zadań, podejść, miejsce w rankingu i unikalny 6-cyfrowy kod        | S-02          | US-01, FR-008                               | done     |
 | S-04 | staff-code-lookup-and-prize   | obsługa loguje się hasłem, znajduje wynik po kodzie i oznacza „nagroda wydana”                          | S-03          | US-01, FR-011, FR-013                       | done     |
 | S-05 | hall-of-fame-screen           | obsługa wyświetla auto-odświeżany ranking top N z ostatnimi wynikami i ukrywa nicki (dyskwalifikacja)   | S-03          | US-01, FR-010, FR-012                       | done     |
-| S-06 | qr-token-gate                 | gracz może zacząć grę tylko po zeskanowaniu aktualnego, rotującego QR z ekranu rankingu                 | S-01, S-05    | US-01, FR-001, FR-017                       | proposed |
+| S-06 | qr-token-gate                 | gracz może zacząć grę tylko po zeskanowaniu aktualnego, rotującego QR z ekranu rankingu                 | S-01, S-05    | US-01, FR-001, FR-017                       | done     |
 
 ## Streams
 
@@ -182,7 +182,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Domyślny czas ważności tokenu i częstotliwość rotacji QR (Open Question 6). — Owner: user. Block: no (PRD przyjmuje ok. 15 minut).
 - **Risk:** na końcu, bo potrzebuje ekranu z S-05 i przepływu startu z S-01, a do tego czasu gra da się testować bez bramki; ustawienie 0 jest fallbackiem, gdyby ekran przy stoisku padł.
-- **Status:** proposed
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -233,3 +233,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-03: gracz po zakończeniu gry widzi liczbę rozwiązanych zadań, liczbę podejść, swoje miejsce w rankingu i unikalny 6-cyfrowy kod.** — Archived 2026-09-29 → `context/archive/2026-09-29-summary-with-prize-code/`. Lesson: —.
 - **S-04: obsługa loguje się hasłem, wyszukuje wynik po 6-cyfrowym kodzie (nick, zadania, podejścia, miejsce, czas) i oznacza „nagroda wydana”.** — Archived 2026-09-29 → `context/archive/2026-09-29-staff-code-lookup-and-prize/`. Lesson: —.
 - **S-05: obsługa wyświetla na ekranie przy stoisku automatycznie odświeżany ranking top N (miejsce, nick, zadania, podejścia) i listę ostatnio zakończonych gier, a ukryty przez nią nick znika z rankingu bez kasowania wyniku.** — Archived 2026-09-30 → `context/archive/2026-09-30-hall-of-fame-screen/`. Lesson: —.
+- **S-06: gracz może rozpocząć grę tylko po zeskanowaniu aktualnego, rotującego kodu QR widocznego na ekranie rankingu (lub wpisaniu 6-cyfrowego kodu spod QR); wygasły lub brakujący token kończy się komunikatem „zeskanuj kod przy stoisku”, a obsługa ustawia czas ważności tokenu (0 = bez wygasania).** — Archived 2026-09-30 → `context/archive/2026-09-30-qr-token-gate/`. Lesson: —.
