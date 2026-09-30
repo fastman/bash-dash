@@ -169,6 +169,7 @@ button:disabled, input:disabled { opacity: 0.6; }
 .duration { color: var(--yellow); }
 .help { color: var(--fg-2); margin: 0; }
 .code-input { font-size: 22px; letter-spacing: 0.15em; }
+.start .hint { margin: 0; font-size: 0.85rem; color: var(--muted); }
 .start-button { min-height: 52px; }
 
 .error { color: var(--red-text); margin: 0; }
