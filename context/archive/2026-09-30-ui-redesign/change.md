@@ -1,10 +1,10 @@
 ---
 change_id: ui-redesign
 title: Redesign Web UI according to the design_handoff_bash_dash_ui project
-status: impl_reviewed
+status: archived
 created: 2026-09-30
 updated: 2026-09-30
-archived_at: null
+archived_at: 2026-09-30T10:22:25Z
 ---
 
 ## Notes
