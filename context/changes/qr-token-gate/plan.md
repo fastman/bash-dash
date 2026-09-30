@@ -293,5 +293,5 @@ Each board poll signs one string and encodes one small QR (about version 5–6),
 
 - [ ] 2.5 QR scans from ~1.5 m with Android and iOS cameras and opens the start form
 - [ ] 2.6 Hall layout fits 1920×1080 and 1366×768; QR rotates about once a minute without a flash
-- [ ] 2.7 TTL 2 min expires an older token; TTL 0 shows the warning and revives it
+- [ ] 2.7 TTL 2 min expires an older token; TTL 0 shows the warning and switches to one fixed code (older rotating codes stop working)
 - [ ] 2.8 Moderation page with "Start QR" fits 360 px and 320 px

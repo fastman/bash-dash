@@ -81,6 +81,21 @@ class GateTests(ViewTestCase):
         self.assertNotContains(resp, 'name="nick"', status_code=403)
         self.assertNotContains(resp, 'has expired', status_code=403)
 
+    def test_refusal_page_has_manual_code_form(self):
+        resp = self.client.get(reverse('game:home'))
+        self.assertContains(resp, 'name="t"', status_code=403)
+        self.assertContains(resp, 'method="get"', status_code=403)
+
+    def test_home_with_wrong_code_says_invalid(self):
+        resp = self.client.get(reverse('game:home'), {'t': '000000' if services.issue_start_token() != '000000' else '111111'})
+        self.assertContains(resp, 'That code is not valid.', status_code=403)
+
+    def test_manually_typed_code_with_space_opens_form(self):
+        token = services.issue_start_token()
+        resp = self.client.get(reverse('game:home'), {'t': f'{token[:3]} {token[3:]}'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f'name="t" value="{token}"')
+
     def test_home_with_expired_token_says_expired(self):
         resp = self.client.get(reverse('game:home'), {'t': self.expired_token()})
         self.assertContains(resp, 'That code has expired.', status_code=403)

@@ -7,6 +7,8 @@ Transaction discipline: never hold a DB transaction open across ``run_command``
 then one short ``transaction.atomic()`` for the Attempt + conditional updates.
 """
 
+import hashlib
+import hmac
 import logging
 import re
 import threading
@@ -16,7 +18,6 @@ from urllib.parse import quote
 
 import segno
 from django.conf import settings
-from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import DurationField, ExpressionWrapper, F, Q
@@ -333,6 +334,7 @@ TOKEN_EXPIRED = 'expired'
 TOKEN_TTL_MIN_S = 120
 TOKEN_TTL_MAX_S = 86400
 _TOKEN_SALT = 'game.start-token'
+TOKEN_DIGITS = 6
 
 
 def gate_settings() -> GateSettings:
@@ -356,27 +358,37 @@ def _epoch(now) -> int:
     return int((now or timezone.now()).timestamp())
 
 
+def _code_for_bucket(bucket: int) -> str:
+    digest = hmac.new(settings.SECRET_KEY.encode(), f'{_TOKEN_SALT}:{bucket}'.encode(), hashlib.sha256).digest()
+    return f'{int.from_bytes(digest[:8], "big") % 10 ** TOKEN_DIGITS:0{TOKEN_DIGITS}d}'
+
+
+def normalize_token(token) -> str:
+    """Drop whitespace so a code typed as "123 456" matches."""
+    return ''.join((token or '').split())
+
+
 def issue_start_token(now=None) -> str:
-    """Signed issue time, bucketed to the rotation period so it is stable within one period."""
-    rotate = settings.START_TOKEN_ROTATE_S
-    issued = _epoch(now) // rotate * rotate
-    return signing.Signer(salt=_TOKEN_SALT).sign(str(issued))
+    """Six-digit code, stable within one rotation period. With no expiry (ttl 0) it never rotates."""
+    if gate_settings().token_ttl_s == 0:
+        return _code_for_bucket(0)
+    return _code_for_bucket(_epoch(now) // settings.START_TOKEN_ROTATE_S)
 
 
 def check_start_token(token, now=None) -> str:
+    token = normalize_token(token)
     if not token:
         return TOKEN_MISSING
-    try:
-        issued = int(signing.Signer(salt=_TOKEN_SALT).unsign(token))
-    except (signing.BadSignature, ValueError):
-        return TOKEN_INVALID
-    age = _epoch(now) - issued
-    if age < -settings.START_TOKEN_ROTATE_S:
-        return TOKEN_INVALID
     ttl = gate_settings().token_ttl_s
-    if ttl and age > ttl:
-        return TOKEN_EXPIRED
-    return TOKEN_OK
+    if ttl == 0:
+        return TOKEN_OK if hmac.compare_digest(token, _code_for_bucket(0)) else TOKEN_INVALID
+    rotate = settings.START_TOKEN_ROTATE_S
+    current = _epoch(now) // rotate
+    # Scan back past the longest lifetime staff can set, to tell "expired" from "wrong".
+    for bucket in range(current, current - TOKEN_TTL_MAX_S // rotate - 2, -1):
+        if hmac.compare_digest(token, _code_for_bucket(bucket)):
+            return TOKEN_EXPIRED if _epoch(now) - bucket * rotate > ttl else TOKEN_OK
+    return TOKEN_INVALID
 
 
 def start_url(request, token: str) -> str:

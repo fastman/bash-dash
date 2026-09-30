@@ -572,6 +572,23 @@ class StartTokenTests(TestCase):
     def at(self, seconds):
         return self.NOW + timedelta(seconds=seconds)
 
+    def test_token_is_six_digits(self):
+        self.assertRegex(services.issue_start_token(self.NOW), r'^\d{6}$')
+
+    def test_token_typed_with_spaces_is_ok(self):
+        token = services.issue_start_token(self.NOW)
+        spaced = f'{token[:3]} {token[3:]}'
+        self.assertEqual(services.check_start_token(spaced, self.NOW), services.TOKEN_OK)
+
+    def test_zero_ttl_uses_one_fixed_code(self):
+        services.set_token_ttl(0)
+        self.assertEqual(services.issue_start_token(self.NOW), services.issue_start_token(self.at(10 ** 6)))
+
+    def test_wrong_code_is_invalid(self):
+        good = services.issue_start_token(self.NOW)
+        wrong = f'{(int(good) + 1) % 10 ** 6:06d}'
+        self.assertEqual(services.check_start_token(wrong, self.NOW), services.TOKEN_INVALID)
+
     def test_fresh_token_is_ok(self):
         token = services.issue_start_token(self.NOW)
         self.assertEqual(services.check_start_token(token, self.NOW), services.TOKEN_OK)

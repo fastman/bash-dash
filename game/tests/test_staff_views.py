@@ -327,6 +327,11 @@ class QrTests(StaffTestCase):
         with mock.patch.object(timezone, 'now', return_value=start + timedelta(seconds=rotate)):
             self.assertNotEqual(self.qr_svg(), first)
 
+    def test_board_shows_code_under_qr(self):
+        token = services.issue_start_token()
+        resp = self.client.get(reverse('game:staff_hall_board'))
+        self.assertContains(resp, f'{token[:3]} {token[3:]}')
+
     def test_start_url_uses_public_base_url_and_token_is_valid(self):
         token = services.issue_start_token()
         request = RequestFactory().get('/')

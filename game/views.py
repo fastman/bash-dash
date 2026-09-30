@@ -86,7 +86,9 @@ def _gate_refusal(request, token):
     status = services.check_start_token(token)
     if status == services.TOKEN_OK:
         return None
-    return render(request, 'game/gate.html', {'expired': status == services.TOKEN_EXPIRED}, status=403)
+    return render(request, 'game/gate.html', {
+        'expired': status == services.TOKEN_EXPIRED, 'invalid': status == services.TOKEN_INVALID,
+        'code': token, 'digits': services.TOKEN_DIGITS}, status=403)
 
 
 @require_GET
@@ -94,7 +96,7 @@ def home(request):
     game = _session_game(request)
     if game:
         return _redirect_existing(game)
-    token = request.GET.get('t')
+    token = services.normalize_token(request.GET.get('t'))
     refusal = _gate_refusal(request, token)
     if refusal:
         return refusal
@@ -106,7 +108,7 @@ def start(request):
     game = _session_game(request)
     if game:
         return _redirect_existing(game)
-    token = request.POST.get('t')
+    token = services.normalize_token(request.POST.get('t'))
     refusal = _gate_refusal(request, token)
     if refusal:
         return refusal

@@ -2,6 +2,13 @@
 {% block content %}
 <section class="rules">
   <h1>Scan the QR code at the booth to play</h1>
-  {% if expired %}<p>That code has expired.</p>{% endif %}
+  {% if expired %}<p class="error">That code has expired.</p>{% elif invalid %}<p class="error">That code is not valid.</p>{% endif %}
+  <p>Can't scan? Enter the {{ digits }}-digit code shown under the QR code.</p>
 </section>
+<form method="get" action="{% url 'game:home' %}" class="start">
+  <label for="code">Code</label>
+  <input id="code" name="t" type="text" inputmode="numeric" pattern="[0-9 ]*" maxlength="{{ digits|add:1 }}" required
+         autocomplete="off" value="{{ code|default:'' }}">
+  <button type="submit">Continue</button>
+</form>
 {% endblock %}

@@ -66,7 +66,9 @@ def _board_context():
 
 def _hall_context(request):
     ctx = _board_context()
-    ctx['qr_svg'] = services.qr_svg(services.start_url(request, services.issue_start_token()))
+    token = services.issue_start_token()
+    ctx['qr_svg'] = services.qr_svg(services.start_url(request, token))
+    ctx['start_code'] = f'{token[:3]} {token[3:]}'  # grouped for reading aloud; players may type it either way
     return ctx
 
 

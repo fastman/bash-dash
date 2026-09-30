@@ -182,4 +182,5 @@ main.hall { max-width: 110rem; }
 .hall .hall-qr { text-align: center; }
 .hall .qr-tile { background: #fff; padding: 0.5rem; border-radius: 8px; height: 35vh; min-height: 14rem; aspect-ratio: 1; }
 .hall .qr-tile svg { display: block; width: 100%; height: 100%; }
-.hall .qr-caption { font-size: 2rem; margin: 0.5rem 0; }
+.hall .qr-caption { font-size: 2rem; margin: 0.5rem 0 0; }
+.hall .qr-code { font-family: monospace; font-size: 3rem; letter-spacing: 0.15em; margin: 0; }
