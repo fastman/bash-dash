@@ -1,25 +1,27 @@
 <section class="hall-top">
-  <h2>Hall of fame</h2>
+  <div class="rule"><span class="badge pink">Hall of fame</span></div>
   {% if board.top %}
   <ol class="hall-rows">
     {% for r in board.top %}
-    <li class="hall-row{% if r.place <= 3 %} podium{% endif %}"><span class="place">#{{ r.place }}</span> <span class="nick">{{ r.nick }}</span> <span class="stat">{{ r.solved }} / {{ total }}</span> <span class="stat">{{ r.attempts }} att.</span></li>
+    <li class="hall-row{% if r.place <= 3 %} podium podium-{{ r.place }}{% endif %}"><span class="place">#{{ r.place }}</span> <span class="nick">{{ r.nick }}</span> <span class="stat">{{ r.solved }} / {{ total }}</span> <span class="stat att">{{ r.attempts }} att.</span></li>
     {% endfor %}
   </ol>
   {% else %}<p class="muted">No finished games yet</p>{% endif %}
 </section>
 <section class="hall-recent">
-  <h2>Just finished</h2>
+  <div class="rule"><span class="badge lime">Just finished</span></div>
   {% if board.recent %}
   <ol class="hall-rows">
     {% for r in board.recent %}
-    <li class="hall-row"><span class="nick">{{ r.nick }}</span> <span class="stat">{{ r.solved }} / {{ total }}</span> <span class="stat">{{ r.attempts }} att.</span> <span class="place">#{{ r.place }}</span></li>
+    <li class="hall-row"><span class="nick">{{ r.nick }}</span> <span class="stat">{{ r.solved }} / {{ total }}</span> <span class="stat att">{{ r.attempts }} att.</span> <span class="place">#{{ r.place }}</span></li>
     {% endfor %}
   </ol>
   {% else %}<p class="muted">Nobody has finished yet</p>{% endif %}
 </section>
 <section class="hall-qr">
   <div class="qr-tile">{{ qr_svg|safe }}</div>
-  <p class="qr-caption">Scan to play</p>
-  <p class="qr-code">{{ start_code }}</p>
+  <div class="qr-text">
+    <p class="qr-caption">Scan to play</p>
+    <p class="qr-code">{{ start_code }}</p>
+  </div>
 </section>

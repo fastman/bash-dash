@@ -289,24 +289,53 @@ button:disabled, input:disabled { opacity: 0.6; }
 .logout .link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 0; cursor: pointer; }
 
 /* Hall of fame big screen (S-05) */
-main.hall { max-width: 110rem; }
-.hall { font-size: 1.25rem; }
-.hall #board { display: grid; grid-template-columns: 3fr 2fr auto; gap: 2rem; align-items: start; }
-.hall h2 { font-size: 2rem; margin: 0.5rem 0; }
+main.hall { max-width: 110rem; padding: 44px 56px; }
+.hall-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+.hall-header .logo { margin: 0; font-size: clamp(9px, 1.1vw, 17px); }
+.hall-tagline { margin: 0; color: var(--muted); font-size: 22px; white-space: nowrap; }
+.hall #board { display: grid; grid-template-columns: minmax(0, 1fr) 560px; grid-template-rows: auto 1fr; column-gap: 64px; row-gap: 40px; align-items: start; }
+.hall .hall-top { grid-column: 1; grid-row: 1 / 3; }
+.hall .hall-qr { grid-column: 2; grid-row: 1; }
+.hall .hall-recent { grid-column: 2; grid-row: 2; }
+.hall .rule { margin: 0 0 12px; }
+.hall .rule .badge { font-size: 24px; padding: 2px 12px; text-transform: uppercase; }
+.hall .hall-recent .rule .badge { font-size: 20px; }
 .hall .hall-rows { list-style: none; margin: 0; padding: 0; }
-.hall .hall-row { display: flex; gap: 1rem; align-items: baseline; font-size: 2rem; padding: 0.25rem 0.5rem;
-  border-bottom: 1px solid var(--border); }
+.hall .hall-row { display: flex; gap: 16px; align-items: baseline; font-size: 30px; padding: 7px 8px;
+  border-bottom: 1px solid var(--border-soft); }
 .hall .hall-row .nick { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hall .hall-row .place { font-family: var(--mono); color: var(--lime); min-width: 3.5rem; }
-.hall .hall-row .stat { font-family: var(--mono); color: var(--muted); }
-.hall .hall-row.podium { color: var(--yellow); font-weight: bold; }
+.hall .hall-row .place { color: var(--lime); min-width: 76px; }
+.hall .hall-row .stat { color: var(--fg-2); }
+.hall .hall-row .stat.att { color: var(--muted); min-width: 150px; text-align: right; }
+.hall .hall-row.podium { font-weight: bold; }
+.hall .hall-row.podium .place { color: var(--ink); background: var(--yellow); border-radius: 4px; padding: 0 8px; min-width: 0; margin-right: 68px; }
+.hall .hall-row.podium-1 .nick { color: var(--yellow); }
+.hall .hall-row.podium-2 .place { background: var(--cyan); }
+.hall .hall-row.podium-2 .nick { color: var(--cyan); }
+.hall .hall-row.podium-3 .place { background: var(--pink); }
+.hall .hall-row.podium-3 .nick { color: var(--pink); }
+.hall .hall-recent .hall-row { font-size: 26px; }
+.hall .hall-recent .hall-row .place { min-width: 0; }
+.hall .hall-recent .hall-row .stat.att { min-width: 0; }
 .hall .hall-status { position: fixed; right: 1rem; bottom: 1rem; margin: 0; padding: 0.4rem 0.8rem;
-  border: 1px solid var(--yellow); border-radius: 6px; background: var(--panel); color: var(--yellow); }
-.hall .hall-status.bad { border-color: var(--red-text); color: var(--red-text); }
+  border: 1px solid var(--yellow); border-radius: 10px; background: var(--panel); color: var(--yellow); font-size: 1rem; }
+.hall .hall-status.bad { border-color: var(--red); color: var(--red-text); }
+.hall .hall-qr { display: flex; align-items: center; gap: 32px; background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 24px; }
+.hall .qr-tile { flex: none; background: #fff; padding: 12px; border-radius: 14px; width: 236px; height: 236px;
+  box-shadow: 0 0 0 3px var(--pink), 0 0 40px color-mix(in srgb, var(--pink) 35%, transparent); }
+.hall .qr-tile svg { display: block; width: 100%; height: 100%; }
+.hall .qr-caption { font-size: 32px; font-weight: bold; margin: 0 0 8px; }
+.hall .qr-code { font-size: 46px; font-weight: bold; color: var(--yellow); letter-spacing: 0.12em; margin: 0; }
 @media (max-width: 900px) {
-  .hall #board { grid-template-columns: 1fr; }
-  .hall .qr-tile { max-width: 20rem; }
-  .hall .hall-row { font-size: 1.25rem; }
+  main.hall { padding: 18px; }
+  .hall-header { flex-direction: column; align-items: flex-start; }
+  .hall-tagline { font-size: 16px; }
+  .hall #board { grid-template-columns: 1fr; grid-template-rows: none; }
+  .hall .hall-top, .hall .hall-qr, .hall .hall-recent { grid-column: 1; grid-row: auto; }
+  .hall .hall-qr { flex-direction: column; text-align: center; }
+  .hall .hall-row, .hall .hall-recent .hall-row { font-size: 20px; }
+  .hall .hall-row .stat.att { min-width: 0; }
+  .hall .hall-row.podium .place { margin-right: 0; }
 }
 
 /* Moderation (S-05) */
@@ -317,9 +346,3 @@ main.hall { max-width: 110rem; }
 .moderate .hide-button { background: var(--red-text); border-color: var(--red-text); color: #fff; }
 .staff-nav { font-size: 0.9rem; }
 @media (max-width: 400px) { .moderate .mod-row { flex-wrap: wrap; } .moderate .mod-row .muted { order: 3; width: 100%; } }
-
-.hall .hall-qr { text-align: center; }
-.hall .qr-tile { background: #fff; padding: 0.5rem; border-radius: 8px; height: 35vh; min-height: 14rem; aspect-ratio: 1; }
-.hall .qr-tile svg { display: block; width: 100%; height: 100%; }
-.hall .qr-caption { font-size: 2rem; margin: 0.5rem 0 0; }
-.hall .qr-code { font-family: monospace; font-size: 3rem; letter-spacing: 0.15em; margin: 0; }

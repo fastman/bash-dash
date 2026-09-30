@@ -342,7 +342,7 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Automated
 
-- [x] 3.1 Full test suite passes: `uv run python manage.py test`
+- [x] 3.1 Full test suite passes: `uv run python manage.py test` — 5b2d434
 
 #### Manual
 
@@ -354,7 +354,7 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Automated
 
-- [ ] 4.1 Full test suite passes: `uv run python manage.py test`
+- [x] 4.1 Full test suite passes: `uv run python manage.py test`
 
 #### Manual
 
