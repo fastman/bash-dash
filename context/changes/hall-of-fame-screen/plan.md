@@ -448,10 +448,10 @@ Each refresh (once per `HALL_REFRESH_S`, one screen) runs the bulk `expire_overd
 
 #### Manual
 
-- [ ] 2.4 Both columns fit 1920×1080 and 1366×768, readable from ~3 m; stacks below 900 px
-- [ ] 2.5 New finished game appears within one refresh without a flash
-- [ ] 2.6 Server down shows "Reconnecting…" and keeps the board; recovers on restart
-- [ ] 2.7 Logout elsewhere shows "Session expired"; re-login recovers without reload
+- [x] 2.4 Both columns fit 1920×1080 and 1366×768, readable from ~3 m; stacks below 900 px
+- [x] 2.5 New finished game appears within one refresh without a flash
+- [x] 2.6 Server down shows "Reconnecting…" and keeps the board; recovers on restart
+- [x] 2.7 Logout elsewhere shows "Session expired"; re-login recovers without reload
 
 ### Phase 3: Moderation (hide / unhide)
 
@@ -463,6 +463,6 @@ Each refresh (once per `HALL_REFRESH_S`, one screen) runs the bulk `expire_overd
 
 #### Manual
 
-- [ ] 3.4 Hiding removes the nick from the screen within one refresh; unhiding restores it
-- [ ] 3.5 Moderation page fits 360 px and 320 px; buttons easy to tap
-- [ ] 3.6 Hidden player's `/done` shows code and "not ranked"; lookup shows "disqualified" with prize button
+- [x] 3.4 Hiding removes the nick from the screen within one refresh; unhiding restores it
+- [x] 3.5 Moderation page fits 360 px and 320 px; buttons easy to tap
+- [x] 3.6 Hidden player's `/done` shows code and "not ranked"; lookup shows "disqualified" with prize button
