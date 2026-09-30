@@ -233,6 +233,6 @@ None. There is no schema change. Existing nicks (up to 20 chars, any characters)
 
 #### Manual
 
-- [ ] 2.3 On a phone-sized viewport, the hint is readable and does not crowd the Start button
-- [ ] 2.4 A 13th character is blocked, and `ab-cd` shows the browser validation popup with the rule text
-- [ ] 2.5 A 12-character nick shows in full in the `/staff/hall` ranking rows
+- [x] 2.3 On a phone-sized viewport, the hint is readable and does not crowd the Start button
+- [x] 2.4 A 13th character is blocked, and `ab-cd` shows the browser validation popup with the rule text
+- [x] 2.5 A 12-character nick shows in full in the `/staff/hall` ranking rows
