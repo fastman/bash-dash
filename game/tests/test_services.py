@@ -1,6 +1,6 @@
 import re
 import threading
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from unittest import mock
 
 from django.db import IntegrityError
@@ -564,3 +564,67 @@ class PrizeTests(ServiceTestCase):
         self.assertIsNone(services.solve_time(game))
         game.last_solved_at = game.started_at + timedelta(seconds=75)
         self.assertEqual(services.solve_time(game), timedelta(seconds=75))
+
+
+class StartTokenTests(TestCase):
+    NOW = timezone.now().replace(microsecond=0)
+
+    def at(self, seconds):
+        return self.NOW + timedelta(seconds=seconds)
+
+    def test_fresh_token_is_ok(self):
+        token = services.issue_start_token(self.NOW)
+        self.assertEqual(services.check_start_token(token, self.NOW), services.TOKEN_OK)
+
+    def test_token_is_stable_within_a_rotation_period_and_changes_after(self):
+        rotate = 60
+        epoch = int(self.NOW.timestamp())
+        start = self.NOW - timedelta(seconds=epoch % rotate)
+        a = services.issue_start_token(start)
+        self.assertEqual(a, services.issue_start_token(start + timedelta(seconds=rotate - 1)))
+        self.assertNotEqual(a, services.issue_start_token(start + timedelta(seconds=rotate)))
+
+    def test_expires_just_after_ttl_but_not_at_ttl(self):
+        services.set_token_ttl(300)
+        token = services.issue_start_token(self.NOW)
+        issued = int(self.NOW.timestamp()) // 60 * 60
+        at_ttl = datetime.fromtimestamp(issued + 300, tz=dt_timezone.utc)
+        self.assertEqual(services.check_start_token(token, at_ttl), services.TOKEN_OK)
+        self.assertEqual(services.check_start_token(token, at_ttl + timedelta(seconds=1)),
+                         services.TOKEN_EXPIRED)
+
+    def test_ttl_zero_never_expires(self):
+        services.set_token_ttl(0)
+        token = services.issue_start_token(self.NOW)
+        self.assertEqual(services.check_start_token(token, self.at(10 ** 7)), services.TOKEN_OK)
+
+    def test_lowering_ttl_expires_issued_token(self):
+        services.set_token_ttl(900)
+        token = services.issue_start_token(self.NOW)
+        later = self.at(400)
+        self.assertEqual(services.check_start_token(token, later), services.TOKEN_OK)
+        services.set_token_ttl(120)
+        self.assertEqual(services.check_start_token(token, later), services.TOKEN_EXPIRED)
+
+    def test_missing_and_invalid_tokens(self):
+        self.assertEqual(services.check_start_token(None), services.TOKEN_MISSING)
+        self.assertEqual(services.check_start_token(''), services.TOKEN_MISSING)
+        self.assertEqual(services.check_start_token('garbage'), services.TOKEN_INVALID)
+        token = services.issue_start_token(self.NOW)
+        self.assertEqual(services.check_start_token(token[:-1] + ('a' if token[-1] != 'a' else 'b'), self.NOW),
+                         services.TOKEN_INVALID)
+
+    def test_token_from_the_future_is_invalid(self):
+        token = services.issue_start_token(self.at(3600))
+        self.assertEqual(services.check_start_token(token, self.NOW), services.TOKEN_INVALID)
+
+    def test_set_token_ttl_bounds(self):
+        for bad in (1, 119, 86401, -1):
+            with self.assertRaises(ValueError):
+                services.set_token_ttl(bad)
+        for good in (0, 120, 86400):
+            self.assertEqual(services.set_token_ttl(good).token_ttl_s, good)
+
+    @override_settings(START_TOKEN_TTL_S=777)
+    def test_gate_settings_seeds_from_setting(self):
+        self.assertEqual(services.gate_settings().token_ttl_s, 777)

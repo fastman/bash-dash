@@ -281,7 +281,7 @@ class ModerationTests(StaffTestCase):
 
     def test_disqualification_end_to_end_on_done(self):
         player = Client()
-        player.post(reverse('game:start'), {'nick': 'zed'})
+        player.post(reverse('game:start'), {'nick': 'zed', 't': services.issue_start_token()})
         game = GameSession.objects.get(pk=player.session['game_id'])
         GameSession.objects.filter(pk=game.pk).update(
             code='555555', solved=1, attempts=9, last_solved_at=timezone.now(), finished_at=timezone.now())

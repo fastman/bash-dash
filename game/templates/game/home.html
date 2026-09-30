@@ -13,6 +13,7 @@
 </section>
 <form method="post" action="{% url 'game:start' %}" class="start">
   {% csrf_token %}
+  <input type="hidden" name="t" value="{{ token }}">
   <label for="nick">Your nick</label>
   <input id="nick" name="nick" type="text" maxlength="20" required value="{{ nick|default:'' }}"
          autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">

@@ -1,0 +1,7 @@
+{% extends 'game/base.html' %}
+{% block content %}
+<section class="rules">
+  <h1>Scan the QR code at the booth to play</h1>
+  {% if expired %}<p>That code has expired.</p>{% endif %}
+</section>
+{% endblock %}

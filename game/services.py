@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from django.conf import settings
+from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import DurationField, ExpressionWrapper, F, Q
@@ -23,7 +24,7 @@ from django.utils import timezone
 from challenges import catalog, sandbox
 from challenges.catalog import Challenge
 
-from .models import Attempt, GameSession, generate_code
+from .models import Attempt, GameSession, GateSettings, generate_code
 
 logger = logging.getLogger('game')
 
@@ -319,3 +320,54 @@ def solve_time(game: GameSession) -> timedelta | None:
     if game.last_solved_at is None:
         return None
     return game.last_solved_at - game.started_at
+
+
+# QR start gate (S-06)
+TOKEN_OK = 'ok'
+TOKEN_MISSING = 'missing'
+TOKEN_INVALID = 'invalid'
+TOKEN_EXPIRED = 'expired'
+TOKEN_TTL_MIN_S = 120
+TOKEN_TTL_MAX_S = 86400
+_TOKEN_SALT = 'game.start-token'
+
+
+def gate_settings() -> GateSettings:
+    return GateSettings.objects.get_or_create(
+        pk=1, defaults={'token_ttl_s': settings.START_TOKEN_TTL_S})[0]
+
+
+def set_token_ttl(ttl_s: int) -> GateSettings:
+    if ttl_s != 0 and not TOKEN_TTL_MIN_S <= ttl_s <= TOKEN_TTL_MAX_S:
+        raise ValueError(f'ttl must be 0 or {TOKEN_TTL_MIN_S}-{TOKEN_TTL_MAX_S} seconds')
+    obj = gate_settings()
+    obj.token_ttl_s = ttl_s
+    obj.save()
+    return obj
+
+
+def _epoch(now) -> int:
+    return int((now or timezone.now()).timestamp())
+
+
+def issue_start_token(now=None) -> str:
+    """Signed issue time, bucketed to the rotation period so it is stable within one period."""
+    rotate = settings.START_TOKEN_ROTATE_S
+    issued = _epoch(now) // rotate * rotate
+    return signing.Signer(salt=_TOKEN_SALT).sign(str(issued))
+
+
+def check_start_token(token, now=None) -> str:
+    if not token:
+        return TOKEN_MISSING
+    try:
+        issued = int(signing.Signer(salt=_TOKEN_SALT).unsign(token))
+    except (signing.BadSignature, ValueError):
+        return TOKEN_INVALID
+    age = _epoch(now) - issued
+    if age < -settings.START_TOKEN_ROTATE_S:
+        return TOKEN_INVALID
+    ttl = gate_settings().token_ttl_s
+    if ttl and age > ttl:
+        return TOKEN_EXPIRED
+    return TOKEN_OK
