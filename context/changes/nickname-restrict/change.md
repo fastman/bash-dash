@@ -1,7 +1,7 @@
 ---
 change_id: nickname-restrict
 title: Restrict allowed nicknames (server-side validation)
-status: planned
+status: plan_reviewed
 created: 2026-09-30
 updated: 2026-09-30
 archived_at: null
