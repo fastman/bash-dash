@@ -63,6 +63,16 @@ class HomeAndStartTests(ViewTestCase):
         self.assertEqual(GameSession.objects.count(), 0)
         self.assertNotIn('game_id', self.client.session)
 
+    def test_start_with_rule_breaking_nick_shows_rule_and_keeps_input_and_token(self):
+        token = services.issue_start_token()
+        resp = self.client.post(reverse('game:start'), {'nick': 'bad nick!', 't': token})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Use 1-12 letters, digits or _ (no spaces).')
+        self.assertContains(resp, 'value="bad nick!"')
+        self.assertContains(resp, f'name="t" value="{token}"')
+        self.assertEqual(GameSession.objects.count(), 0)
+        self.assertNotIn('game_id', self.client.session)
+
     def test_home_and_start_with_active_game_redirect_to_play(self):
         self.start('neo')
         self.assertRedirects(self.client.get(reverse('game:home')), reverse('game:play'))

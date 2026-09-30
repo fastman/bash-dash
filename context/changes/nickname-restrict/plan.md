@@ -214,15 +214,15 @@ None. There is no schema change. Existing nicks (up to 20 chars, any characters)
 
 #### Automated
 
-- [ ] 1.1 Full suite passes: `uv run python manage.py test game challenges`
-- [ ] 1.2 New rule tests pass: `uv run python manage.py test game.tests.test_services game.tests.test_views`
-- [ ] 1.3 Bench still runs and cleans up: `uv run python manage.py test game.tests.test_bench`
-- [ ] 1.4 No old bench prefix left: `grep -rn "bench-{" game/` returns nothing
+- [x] 1.1 Full suite passes: `uv run python manage.py test game challenges`
+- [x] 1.2 New rule tests pass: `uv run python manage.py test game.tests.test_services game.tests.test_views`
+- [x] 1.3 Bench still runs and cleans up: `uv run python manage.py test game.tests.test_bench`
+- [x] 1.4 No old bench prefix left: `grep -rn "bench-{" game/` returns nothing
 
 #### Manual
 
-- [ ] 1.5 With a valid QR token, starting as `neo_42` goes to `/play`
-- [ ] 1.6 Submitting `ab cd` (browser check bypassed) shows the new error, keeps the nick, and allows a retry without rescanning
+- [x] 1.5 With a valid QR token, starting as `neo_42` goes to `/play`
+- [x] 1.6 Submitting `ab cd` (browser check bypassed) shows the new error, keeps the nick, and allows a retry without rescanning
 
 ### Phase 2: Start form hint and browser check
 

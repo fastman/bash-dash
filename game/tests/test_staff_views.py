@@ -181,7 +181,9 @@ class HallTests(StaffTestCase):
             self.assertIn('>ann<', html)
 
     def test_nick_is_escaped(self):
-        self.make_game(nick='<b>x</b>')
+        # Bypass start_game on purpose: old rows and admin edits can still hold HTML-like nicks.
+        game = self.make_game()
+        GameSession.objects.filter(pk=game.pk).update(nick='<b>x</b>')
         html = self.client.get(self.board).content.decode()
         self.assertIn('&lt;b&gt;x&lt;/b&gt;', html)
         self.assertNotIn('<b>x</b>', html)

@@ -118,7 +118,7 @@ def start(request):
     except ValueError:
         return render(request, 'game/home.html', {
             'duration': settings.GAME_DURATION_S, 'token': token,
-            'error': f'Enter a nick of 1-{services.NICK_MAX_CHARS} characters.', 'nick': nick})
+            'error': f'Use 1-{services.NICK_MAX_CHARS} letters, digits or _ (no spaces).', 'nick': nick})
     request.session['game_id'] = str(game.pk)
     return redirect('game:play')
 

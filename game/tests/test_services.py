@@ -48,12 +48,17 @@ class StartGameTests(ServiceTestCase):
         self.assertIsNotNone(game.started_at)
         self.assertFalse(game.is_finished)
 
-    def test_empty_and_too_long_nicks_are_rejected(self):
-        for nick in ('', '   ', 'x' * 21):
+    def test_empty_too_long_and_disallowed_nicks_are_rejected(self):
+        bad = ('', '   ', 'x' * 13, 'ab cd', 'abc-def', 'zażółć', 'neo!', '<b>x</b>', 'a\nb', '٣')
+        for nick in bad:
             with self.assertRaises(ValueError, msg=repr(nick)):
                 services.start_game(nick)
-        services.start_game('x' * 20)  # boundary is fine
-        self.assertEqual(GameSession.objects.count(), 1)
+        self.assertEqual(GameSession.objects.count(), 0)
+
+    def test_valid_nicks_are_accepted_and_stripped(self):
+        for nick in ('x' * 12, 'Neo_42', '_', '123'):
+            self.assertEqual(services.start_game(nick).nick, nick)
+        self.assertEqual(services.start_game('  neo_1  ').nick, 'neo_1')
 
 
 class PrizeCodeTests(ServiceTestCase):
