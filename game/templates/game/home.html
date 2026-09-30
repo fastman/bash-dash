@@ -17,7 +17,7 @@
   <input type="hidden" name="t" value="{{ token }}">
   <label for="nick">Your nick</label>
   <p id="nick-hint" class="hint">Letters, digits and _ · max 12</p>
-  <input id="nick" name="nick" type="text" maxlength="12" pattern="[A-Za-z0-9_]{1,12}"
+  <input id="nick" name="nick" type="text" maxlength="12" pattern=" *[A-Za-z0-9_]{1,12} *"
          title="Use 1-12 letters, digits or _ (no spaces)." aria-describedby="nick-hint"
          required value="{{ nick|default:'' }}"
          autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">

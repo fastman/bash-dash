@@ -37,6 +37,7 @@ TIMED_OUT_Q = Q(finished_at=F('deadline_at'), current_slug__isnull=False)
 
 NICK_MAX_CHARS = 12
 NICK_RE = re.compile(rf'[A-Za-z0-9_]{{1,{NICK_MAX_CHARS}}}')  # use with fullmatch
+NICK_HTML_PATTERN = rf' *{NICK_RE.pattern} *'  # browser pattern: start_game trims outer spaces
 CODE_RE = re.compile(r'^\d{6}$')
 CODE_ATTEMPTS = 10
 
