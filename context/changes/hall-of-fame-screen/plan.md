@@ -457,9 +457,9 @@ Each refresh (once per `HALL_REFRESH_S`, one screen) runs the bulk `expire_overd
 
 #### Automated
 
-- [x] 3.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
-- [x] 3.2 Django checks pass: `uv run python manage.py check`
-- [x] 3.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
+- [x] 3.1 Game and challenge tests pass: `uv run python manage.py test game challenges` — 9098968
+- [x] 3.2 Django checks pass: `uv run python manage.py check` — 9098968
+- [x] 3.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run` — 9098968
 
 #### Manual
 
