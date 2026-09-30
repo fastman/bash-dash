@@ -2,7 +2,7 @@ from datetime import timedelta
 from unittest import mock
 
 from django.contrib.auth.models import User
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -21,12 +21,13 @@ class StaffTestCase(TestCase):
         self.lookup = reverse('game:staff_lookup')
         self.prize = reverse('game:staff_prize')
 
-    def make_game(self, finished=True, solved=1, attempts=3, nick='neo'):
+    def make_game(self, finished=True, solved=1, attempts=3, nick='neo', code=CODE, elapsed=75, finished_ago=0):
         game = services.start_game(nick)
-        fields = dict(code=CODE, solved=solved, attempts=attempts)
+        fields = dict(code=code, solved=solved, attempts=attempts)
         if finished:
-            now = game.started_at + timedelta(seconds=75)
-            fields.update(finished_at=now, last_solved_at=now if solved else None)
+            now = game.started_at + timedelta(seconds=elapsed)
+            fields['finished_at'] = now - timedelta(seconds=finished_ago)
+            fields['last_solved_at'] = now if solved else None
         GameSession.objects.filter(pk=game.pk).update(**fields)
         return GameSession.objects.get(pk=game.pk)
 
@@ -134,3 +135,75 @@ class HiddenLookupTests(StaffTestCase):
         self.assertContains(resp, 'Hidden from Hall of fame (disqualified)')
         self.assertContains(resp, 'Mark prize given')
         self.assertNotContains(resp, 'not ranked')
+
+
+class HallTests(StaffTestCase):
+    def setUp(self):
+        super().setUp()
+        self.hall = reverse('game:staff_hall')
+        self.board = reverse('game:staff_hall_board')
+
+    def fixture(self):
+        self.make_game(nick='ann', solved=3, attempts=5, code='111111', finished_ago=30)
+        self.make_game(nick='bob', solved=2, attempts=4, code='222222', finished_ago=20)
+        self.make_game(nick='cy', solved=2, attempts=4, code='333333', finished_ago=10)
+        self.make_game(nick='dee', solved=1, attempts=1, code='444444', finished_ago=0)
+        return ['111111', '222222', '333333', '444444']
+
+    def test_anonymous_redirects_and_fragment_is_403(self):
+        client = Client()
+        resp = client.get(self.hall)
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/login/', resp['Location'])
+        self.assertEqual(client.get(self.board).status_code, 403)
+        User.objects.create_user('player', password='x')
+        client.login(username='player', password='x')
+        self.assertEqual(client.get(self.board).status_code, 403)
+
+    def test_rows_in_rank_order_with_shared_places(self):
+        self.fixture()
+        html = self.client.get(self.board).content.decode()
+        self.assertLess(html.index('ann'), html.index('bob'))
+        self.assertLess(html.index('bob'), html.index('dee'))
+        for text in ('Hall of fame', 'Just finished', '3 / ', '#1', '#2', '#4'):
+            self.assertIn(text, html)
+        self.assertNotIn('#3', html)
+
+    def test_no_codes_and_hidden_nick_absent_on_page_and_fragment(self):
+        codes = self.fixture()
+        services.hide_game(GameSession.objects.get(nick='cy').pk)
+        for url in (self.hall, self.board):
+            html = self.client.get(url).content.decode()
+            for code in codes:
+                self.assertNotIn(code, html)
+            self.assertNotIn('>cy<', html)
+            self.assertIn('>ann<', html)
+
+    def test_nick_is_escaped(self):
+        self.make_game(nick='<b>x</b>')
+        html = self.client.get(self.board).content.decode()
+        self.assertIn('&lt;b&gt;x&lt;/b&gt;', html)
+        self.assertNotIn('<b>x</b>', html)
+
+    def test_empty_states(self):
+        html = self.client.get(self.hall).content.decode()
+        self.assertIn('No finished games yet', html)
+        self.assertIn('Nobody has finished yet', html)
+
+    def test_fragment_is_not_cached_and_has_no_page_chrome(self):
+        resp = self.client.get(self.board)
+        self.assertIn('no-store', resp['Cache-Control'])
+        self.assertNotContains(resp, '<html')
+
+    @override_settings(HALL_REFRESH_S=7)
+    def test_page_carries_polling_config(self):
+        html = self.client.get(self.hall).content.decode()
+        self.assertIn(f'data-board-url="{self.board}"', html)
+        self.assertIn('data-refresh-ms="7000"', html)
+
+    @override_settings(HALL_TOP_N=2, HALL_RECENT_N=1)
+    def test_top_n_and_recent_n_truncate(self):
+        self.fixture()
+        html = self.client.get(self.board).content.decode()
+        for nick, shown in (('ann', True), ('bob', True), ('cy', False), ('dee', True)):
+            self.assertEqual(f'>{nick}<' in html, shown, nick)

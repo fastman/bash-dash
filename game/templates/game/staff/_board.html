@@ -1,0 +1,20 @@
+<section class="hall-top">
+  <h2>Hall of fame</h2>
+  {% if board.top %}
+  <ol class="hall-rows">
+    {% for r in board.top %}
+    <li class="hall-row{% if r.place <= 3 %} podium{% endif %}"><span class="place">#{{ r.place }}</span> <span class="nick">{{ r.nick }}</span> <span class="stat">{{ r.solved }} / {{ total }}</span> <span class="stat">{{ r.attempts }} att.</span></li>
+    {% endfor %}
+  </ol>
+  {% else %}<p class="muted">No finished games yet</p>{% endif %}
+</section>
+<section class="hall-recent">
+  <h2>Just finished</h2>
+  {% if board.recent %}
+  <ol class="hall-rows">
+    {% for r in board.recent %}
+    <li class="hall-row"><span class="nick">{{ r.nick }}</span> <span class="stat">{{ r.solved }} / {{ total }}</span> <span class="stat">{{ r.attempts }} att.</span> <span class="place">#{{ r.place }}</span></li>
+    {% endfor %}
+  </ol>
+  {% else %}<p class="muted">Nobody has finished yet</p>{% endif %}
+</section>

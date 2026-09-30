@@ -148,3 +148,23 @@ button:disabled, input:disabled { opacity: 0.6; }
 .notice-bad { color: var(--bad); }
 .prize-button { width: 100%; font-size: 1.25rem; padding: 16px; }
 .logout .link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 0; cursor: pointer; }
+
+/* Hall of fame big screen (S-05) */
+main.hall { max-width: 110rem; }
+.hall { font-size: 1.25rem; }
+.hall #board { display: grid; grid-template-columns: 3fr 2fr; gap: 2rem; }
+.hall h2 { font-size: 2rem; margin: 0.5rem 0; }
+.hall .hall-rows { list-style: none; margin: 0; padding: 0; }
+.hall .hall-row { display: flex; gap: 1rem; align-items: baseline; font-size: 2rem; padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border); }
+.hall .hall-row .nick { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hall .hall-row .place { font-family: var(--mono); color: var(--accent); min-width: 3.5rem; }
+.hall .hall-row .stat { font-family: var(--mono); color: var(--muted); }
+.hall .hall-row.podium { color: var(--warn); font-weight: bold; }
+.hall .hall-status { position: fixed; right: 1rem; bottom: 1rem; margin: 0; padding: 0.4rem 0.8rem;
+  border: 1px solid var(--warn); border-radius: 6px; background: var(--panel); color: var(--warn); }
+.hall .hall-status.bad { border-color: var(--bad); color: var(--bad); }
+@media (max-width: 900px) {
+  .hall #board { grid-template-columns: 1fr; }
+  .hall .hall-row { font-size: 1.25rem; }
+}

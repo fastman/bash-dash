@@ -12,5 +12,7 @@ urlpatterns = [
     path('play/state', views.state, name='state'),
     path('done', views.done, name='done'),
     path('staff', staff_views.lookup, name='staff_lookup'),
+    path('staff/hall', staff_views.hall, name='staff_hall'),
+    path('staff/hall/board', staff_views.hall_board, name='staff_hall_board'),
     path('staff/prize', staff_views.give_prize, name='staff_prize'),
 ]
