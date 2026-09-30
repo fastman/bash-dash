@@ -10,7 +10,7 @@ from django.utils import timezone
 from challenges import catalog, sandbox
 from challenges.tests.fakes import write_excluded
 from game import services
-from game.models import Attempt, GameSession
+from game.models import Attempt, GameSession, GateSettings
 from game.tests.fakes import result
 
 
@@ -628,3 +628,9 @@ class StartTokenTests(TestCase):
     @override_settings(START_TOKEN_TTL_S=777)
     def test_gate_settings_seeds_from_setting(self):
         self.assertEqual(services.gate_settings().token_ttl_s, 777)
+
+    def test_gate_settings_seed_is_clamped_to_staff_bounds(self):
+        for seed, expected in ((0, 0), (30, services.TOKEN_TTL_MIN_S), (10**6, services.TOKEN_TTL_MAX_S)):
+            GateSettings.objects.all().delete()
+            with override_settings(START_TOKEN_TTL_S=seed):
+                self.assertEqual(services.gate_settings().token_ttl_s, expected)

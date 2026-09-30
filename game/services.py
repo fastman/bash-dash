@@ -336,8 +336,11 @@ _TOKEN_SALT = 'game.start-token'
 
 
 def gate_settings() -> GateSettings:
-    return GateSettings.objects.get_or_create(
-        pk=1, defaults={'token_ttl_s': settings.START_TOKEN_TTL_S})[0]
+    # Seed within the staff bounds, so a stray env value cannot close the gate or show odd minutes.
+    seed = settings.START_TOKEN_TTL_S
+    if seed:
+        seed = min(max(seed, TOKEN_TTL_MIN_S), TOKEN_TTL_MAX_S)
+    return GateSettings.objects.get_or_create(pk=1, defaults={'token_ttl_s': seed})[0]
 
 
 def set_token_ttl(ttl_s: int) -> GateSettings:
