@@ -21,10 +21,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-)0jim@t4fa=wd2^4k1%*1s^1=g^okunei$5+^&_&3#4w!m0$=c'
+# Also the HMAC key of the QR start tokens: keep it stable across restarts.
+SECRET_KEY = os.environ.get(
+    'BASHDASH_SECRET_KEY',
+    'django-insecure-)0jim@t4fa=wd2^4k1%*1s^1=g^okunei$5+^&_&3#4w!m0$=c',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('BASHDASH_DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
 ALLOWED_HOSTS = [h for h in os.environ.get('BASHDASH_ALLOWED_HOSTS', '').split(',') if h]
 
@@ -44,6 +48,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -78,7 +83,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': Path(os.environ.get('BASHDASH_DB_DIR', BASE_DIR)) / 'db.sqlite3',
         # Concurrent game writers: WAL + IMMEDIATE + busy timeout. ATOMIC_REQUESTS stays
         # False — never hold a transaction open across a sandbox run.
         # WAL note: back up with `sqlite3 db.sqlite3 ".backup …"`, not cp.
@@ -126,6 +131,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 # Email

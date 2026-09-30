@@ -1,0 +1,29 @@
+# Dev/demo setup: `docker compose up -d --build`. Not the production deploy (F-02).
+services:
+  # Builds the sandbox image into the host's Docker daemon, then exits.
+  sandbox-image:
+    build:
+      context: ./sandbox
+      args:
+        BUILD_PLATFORM: ${BUILD_PLATFORM:-linux/amd64}
+    image: bash-dash-sandbox:latest
+    entrypoint: ["true"]
+    restart: "no"
+
+  app:
+    build: .
+    image: bash-dash-app:latest
+    depends_on:
+      sandbox-image:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      BASHDASH_DB_DIR: /data
+      BASHDASH_DEBUG: "False"
+    ports:
+      - "${BASHDASH_PORT:-8000}:8000"
+    volumes:
+      - ./data:/data
+      # Gives the app control of the host Docker daemon (root-equivalent) — trusted LAN only.
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped

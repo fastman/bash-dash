@@ -1,0 +1,18 @@
+.git
+.claude
+.venv
+.env
+context
+data
+staticfiles
+db.sqlite3*
+__pycache__
+*.pyc
+# Sandbox sources are built by the separate sandbox-image service; the app only
+# needs the challenge definitions.
+sandbox/*
+!sandbox/internal
+sandbox/internal/*
+!sandbox/internal/challenge
+sandbox/internal/challenge/*
+!sandbox/internal/challenge/challenges.yaml
