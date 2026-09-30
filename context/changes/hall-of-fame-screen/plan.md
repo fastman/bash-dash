@@ -35,7 +35,7 @@ Verify: the test suite is green. Then run locally: finish a few games, open `/st
 
 ### Key Discoveries:
 
-- One filter in `ranked_games()` (`game/services.py:104`) is enough to apply disqualification to `/done`, the lookup and the Hall of fame, because all of them go through it. The recent list is a separate query and needs its own `hidden_at__isnull=True` filter.
+- One filter in `ranked_games()` (`game/services.py:104`) is enough to apply disqualification to `/done`, the lookup and the Hall of fame, because all of them go through it. The recent list is derived from the same ranked rows (sorted by finish time), so it needs no separate filter and cannot race with the ranking query (review F3).
 - `solved > 0` ⇔ `last_solved_at IS NOT NULL` (S-03), so within one `solved` value `elapsed` is either always `None` or never `None`. That makes a single ordered pass over `ranked_games()` enough for competition ranking: rows share a place exactly when `(solved, attempts, elapsed)` are equal. This matches `rank_of`'s "strictly better" count.
 - `staff_member_required` answers an unauthenticated request with a 302 to the login page. `fetch()` follows it silently and gets a 200 login page back. The polling endpoint therefore needs its own check that returns 403, so the JS can tell "session expired" apart from real board HTML.
 - The prize code is the only thing that identifies a winner (PRD Access Control). The big screen is visible to everyone at the booth, so it must never render `code`.
@@ -115,9 +115,9 @@ Games can be hidden and unhidden. Hidden games leave the ranking everywhere. A s
 **Contract**:
 - `ranked_games()`: add `hidden_at__isnull=True` to the filter and update the docstring (hidden games are not ranked).
 - `hide_game(game_id, now=None) -> tuple[GameSession, bool]`: a guarded `UPDATE … WHERE hidden_at IS NULL` sets `hidden_at=now`, then the row is re-read. Returns `True` if this call hid it.
-- `unhide_game(game_id) -> tuple[GameSession, bool]`: a guarded `UPDATE … WHERE hidden_at IS NOT NULL` clears `hidden_at`. Both functions raise `GameSession.DoesNotExist` for an unknown id.
+- `unhide_game(game_id) -> tuple[GameSession, bool]`: a guarded `UPDATE … WHERE hidden_at IS NOT NULL` clears `hidden_at`. Both functions raise `GameSession.DoesNotExist` for an unknown id and must also treat a malformed id (Django raises `ValidationError` for a bad UUID) as `DoesNotExist` (review F4).
 - A frozen dataclass `BoardRow(game_id, nick, solved, attempts, place)`.
-- `hall_of_fame(top_n, recent_n) -> Board` (a frozen dataclass with `top: list[BoardRow]`, `recent: list[BoardRow]`, `ranked_total: int`). It makes one pass over `ranked_games()` (see Critical Implementation Details). `recent` holds the last `recent_n` games ordered by `-finished_at, -pk`, finished and not hidden, each with its place taken from the same pass.
+- `hall_of_fame(top_n, recent_n) -> Board` (a frozen dataclass with `top: list[BoardRow]`, `recent: list[BoardRow]`, `ranked_total: int`). It makes one pass over `ranked_games()` (see Critical Implementation Details). `recent` is built from the same ranked rows (already finished and not hidden), sorted by `-finished_at, -pk` and cut to `recent_n`, so a game finishing between two queries cannot cause a `KeyError` (review F3). No separate recent query and no separate place lookup.
 - `hidden_games() -> QuerySet`: hidden games ordered by `-hidden_at`, for the moderation page.
 
 #### 5. `/done` carry-over
@@ -305,7 +305,7 @@ A phone-friendly staff page to hide an offensive or duplicate nick from the Hall
 
 **Contract**:
 - `moderate(request)`, `GET /staff/moderate`, uses `staff_member_required`. It renders `game/staff/moderate.html` with `board = services.hall_of_fame(HALL_TOP_N, HALL_RECENT_N)` and `hidden = services.hidden_games()`.
-- `hide(request)` and `unhide(request)`, `POST /staff/hide` and `POST /staff/unhide`, use `staff_member_required` and `require_POST`. The field is `game_id`. A missing, malformed or unknown id → `messages.error("No such game.")`. Otherwise call the service and add `messages.success("Hidden <nick>." / "<nick> is back on the Hall of fame.")` or `messages.info` ("already hidden" / "not hidden"). All three outcomes redirect to `game:staff_moderate`.
+- `hide(request)` and `unhide(request)`, `POST /staff/hide` and `POST /staff/unhide`, use `staff_member_required` and `require_POST`. The field is `game_id`. A missing, malformed or unknown id → `messages.error("No such game.")`. Otherwise call the service and add `messages.success("Hidden <nick>." / "<nick> is back on the Hall of fame.")` or `messages.warning` ("already hidden" / "not hidden"; the existing staff template renders `info` in red, review F6). All three outcomes redirect to `game:staff_moderate`.
 
 #### 2. Routes
 
@@ -342,6 +342,7 @@ A phone-friendly staff page to hide an offensive or duplicate nick from the Hall
 **File**: `game/tests/test_staff_views.py`
 
 **Contract**:
+- `StaffTestCase.make_game` gets `code` and finish-time parameters (prize codes must be unique, and all games currently share one finish time) before multi-game tests are written (review F5).
 - Anonymous or non-staff GET `/staff/moderate` and POST to hide/unhide redirect to the login page, and nothing changes in the DB.
 - The moderation page lists top and recent rows with Hide forms, and hidden games with Unhide forms.
 - POST hide → a redirect to moderation, `hidden_at` is set, and after following the redirect the success message appears, the nick is in "Hidden", and it is absent from `/staff/hall/board`.
@@ -405,7 +406,8 @@ Each refresh (once per `HALL_REFRESH_S`, one screen) runs the bulk `expire_overd
 ## Migration Notes
 
 `0005_gamesession_hidden_at` adds a nullable, indexed column. It is safe on the existing DB, and reversing it drops the column. Operational notes for the event:
-- The display laptop logs in with the shared staff account and stays logged in (the Django session lasts 2 weeks by default).
+- The display laptop uses its own staff account that is NOT a superuser and has no model permissions, and the browser runs in kiosk mode: a permanently logged-in booth laptop must not expose the admin's User pages or `/staff/moderate` to passers-by (review F2).
+- The display laptop stays logged in (the Django session lasts 2 weeks by default).
 - Disable the display's screensaver and sleep.
 - Rehearsal games should still be deleted before the event (S-03 plan-review note); hiding is not meant for bulk cleanup.
 
