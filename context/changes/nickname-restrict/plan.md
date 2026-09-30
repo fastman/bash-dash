@@ -228,8 +228,8 @@ None. There is no schema change. Existing nicks (up to 20 chars, any characters)
 
 #### Automated
 
-- [x] 2.1 Full suite passes: `uv run python manage.py test game challenges`
-- [x] 2.2 Home page renders `maxlength="12"` and the nick `pattern`
+- [x] 2.1 Full suite passes: `uv run python manage.py test game challenges` — 355c927
+- [x] 2.2 Home page renders `maxlength="12"` and the nick `pattern` — 355c927
 
 #### Manual
 
