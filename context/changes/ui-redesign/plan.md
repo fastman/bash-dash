@@ -324,8 +324,8 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Automated
 
-- [x] 2.1 Full test suite passes: `uv run python manage.py test`
-- [x] 2.2 JS syntax check passes: `node --check game/static/game/play.js`
+- [x] 2.1 Full test suite passes: `uv run python manage.py test` — 44a0add
+- [x] 2.2 JS syntax check passes: `node --check game/static/game/play.js` — 44a0add
 
 #### Manual
 
@@ -342,7 +342,7 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Automated
 
-- [ ] 3.1 Full test suite passes: `uv run python manage.py test`
+- [x] 3.1 Full test suite passes: `uv run python manage.py test`
 
 #### Manual
 

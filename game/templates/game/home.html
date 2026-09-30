@@ -1,14 +1,15 @@
 {% extends 'game/base.html' %}
 {% load game_text %}
+{% block header %}{% include 'game/_logo.html' %}{% endblock %}
 {% block content %}
 <section class="rules">
-  <h1>How to play</h1>
+  <div class="rule"><span class="badge cyan">How to play</span></div>
   <ul>
     <li>Solve bash challenges in order, one at a time. You can't skip a challenge.</li>
     <li>Type a bash command. It runs in a sandbox and you see its output and whether it solved the challenge.</li>
     <li>Every command you run counts as an attempt, including <code>ls</code> and <code>cat</code>.</li>
     <li>Fewer attempts is better.</li>
-    <li>You have {{ duration|duration_text }}.</li>
+    <li>You have <strong class="duration">{{ duration|duration_text }}</strong>.</li>
   </ul>
 </section>
 <form method="post" action="{% url 'game:start' %}" class="start">
@@ -18,6 +19,6 @@
   <input id="nick" name="nick" type="text" maxlength="20" required value="{{ nick|default:'' }}"
          autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
-  <button type="submit">Start</button>
+  <button type="submit" class="start-button">Start ▸</button>
 </form>
 {% endblock %}

@@ -167,8 +167,13 @@ button:disabled, input:disabled { opacity: 0.6; }
 
 .start { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
 
-.rules ul { padding-left: 1.2rem; }
-.rules li { margin: 4px 0; }
+.rules ul { list-style: none; padding: 0; margin: 0; }
+.rules li { margin: 8px 0; padding-left: 1.6em; position: relative; color: var(--fg-2); }
+.rules li::before { content: "\203A"; color: var(--pink); font-weight: bold; position: absolute; left: 0.4em; }
+.duration { color: var(--yellow); }
+.help { color: var(--fg-2); margin: 0; }
+.code-input { font-size: 22px; letter-spacing: 0.15em; }
+.start-button { min-height: 52px; }
 
 .error { color: var(--red-text); margin: 0; }
 
@@ -248,15 +253,23 @@ button:disabled, input:disabled { opacity: 0.6; }
   white-space: pre;
 }
 
-.done p { font-size: 1.1rem; }
+.done h1 { color: var(--yellow); font-size: 24px; }
+.stats { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 8px 16px; margin: 16px 0; }
+.stats .kv { margin: 8px 0; }
+.stats .solved strong { color: var(--lime); }
+.stats .attempts strong { color: var(--cyan); }
+.stats .place strong { color: var(--pink); }
 
-.prize { text-align: center; margin: 24px 0; }
-.prize-code {
+.prize { text-align: center; margin: 24px 0; padding: 16px; border: 1.5px dashed var(--yellow); border-radius: 14px; }
+.prize p { margin: 4px 0; color: var(--fg-2); }
+.prize-label { display: block; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.prize .prize-code {
   font-family: var(--mono);
-  font-size: clamp(2rem, 14vw, 3.5rem);
+  font-size: clamp(2rem, 14vw, 50px);
+  font-weight: bold;
   letter-spacing: 0.15em;
-  color: var(--lime);
-  margin: 0 0 8px;
+  color: var(--yellow);
+  margin: 4px 0 8px;
   user-select: all;
 }
 .muted { color: var(--muted); font-size: 0.85rem; }
@@ -265,10 +278,13 @@ button:disabled, input:disabled { opacity: 0.6; }
 .staff input[name="code"] { width: 100%; box-sizing: border-box; font-family: var(--mono); font-size: 1.5rem; letter-spacing: 0.15em; }
 .staff-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 16px 0; overflow-wrap: anywhere; }
 .staff-nick { font-size: 2rem; font-weight: bold; margin: 0; }
-.notice-ok, .notice-warn, .notice-bad { border: 1px solid; border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
+.notice-ok, .notice-warn, .notice-bad { border: 1px solid; border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+.notice-ok::before { content: "\2713  "; }
+.notice-warn::before { content: "!  "; }
+.notice-bad::before { content: "\2717  "; }
 .notice-ok { color: var(--lime); }
 .notice-warn { color: var(--yellow); }
-.notice-bad { color: var(--red-text); }
+.notice-bad { color: var(--red-text); border-color: var(--red); }
 .prize-button { width: 100%; font-size: 1.25rem; padding: 16px; }
 .logout .link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 0; cursor: pointer; }
 

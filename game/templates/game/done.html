@@ -1,12 +1,16 @@
 {% extends 'game/base.html' %}
+{% block header %}{% include 'game/_logo.html' %}{% endblock %}
 {% block content %}
 <section class="done">
   <h1>{% if timed_out %}Time's up!{% elif all_solved %}All challenges solved!{% else %}Finished!{% endif %}</h1>
   <p>Well played, <strong>{{ game.nick }}</strong>.</p>
-  <p>Solved: <strong>{{ game.solved }} / {{ total }}</strong></p>
-  <p>Attempts: <strong>{{ game.attempts }}</strong></p>
-  <p>Place: <strong>{% if place %}#{{ place }} of {{ ranked_total }}{% else %}not ranked{% endif %}</strong></p>
+  <div class="stats">
+    <p class="kv solved"><span class="k">Solved</span><span class="leader"></span><strong>{{ game.solved }} / {{ total }}</strong></p>
+    <p class="kv attempts"><span class="k">Attempts</span><span class="leader"></span><strong>{{ game.attempts }}</strong></p>
+    <p class="kv place"><span class="k">Place</span><span class="leader"></span><strong>{% if place %}#{{ place }} of {{ ranked_total }}{% else %}not ranked{% endif %}</strong></p>
+  </div>
   <div class="prize">
+    <span class="prize-label">Prize code</span>
     <p class="prize-code">{{ game.code }}</p>
     <p>Show this code at the booth to claim your prize.</p>
     <p>Take a screenshot so you don't lose it.</p>

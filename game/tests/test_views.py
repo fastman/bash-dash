@@ -455,7 +455,7 @@ class SummaryTests(ViewTestCase):
         self.finish(solved=1, attempts=3)
         html = self.client.get(reverse('game:done')).content.decode()
         self.assertIn('#1 of 1', html)
-        self.assertRegex(html, r'Attempts:\s*<strong>3</strong>')
+        self.assertRegex(html, r'Attempts</span>\s*<span class="leader"></span>\s*<strong>3</strong>')
         self.assertRegex(html, r'class="prize-code"[^>]*>\s*987654\s*<')
 
     def test_code_is_not_leaked_on_play_or_json(self):
