@@ -312,8 +312,8 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Automated
 
-- [ ] 1.1 Full test suite passes: `uv run python manage.py test`
-- [ ] 1.2 Django check passes: `uv run python manage.py check`
+- [x] 1.1 Full test suite passes: `uv run python manage.py test`
+- [x] 1.2 Django check passes: `uv run python manage.py check`
 
 #### Manual
 

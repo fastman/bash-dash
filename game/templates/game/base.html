@@ -8,7 +8,10 @@
 </head>
 <body>
   <main class="{% block main_class %}{% endblock %}">
-    <header class="brand">$ bash-dash</header>
+    {% block header %}<header class="brand">
+      <span class="brand-name"><span class="dollar">$</span><span class="gradient-text">bash-dash</span></span>
+      {% block badge %}{% endblock %}
+    </header>{% endblock %}
     {% block content %}{% endblock %}
   </main>
   {% block scripts %}{% endblock %}
