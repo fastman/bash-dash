@@ -406,7 +406,7 @@ Each refresh (once per `HALL_REFRESH_S`, one screen) runs the bulk `expire_overd
 ## Migration Notes
 
 `0005_gamesession_hidden_at` adds a nullable, indexed column. It is safe on the existing DB, and reversing it drops the column. Operational notes for the event:
-- The display laptop uses its own staff account that is NOT a superuser and has no model permissions, and the browser runs in kiosk mode: a permanently logged-in booth laptop must not expose the admin's User pages or `/staff/moderate` to passers-by (review F2).
+- The display laptop stays logged in as a staff account, and `/staff` and `/staff/moderate` only check `is_staff`. A non-superuser, no-permission account keeps `/admin` out, but kiosk mode and watching the screen are the only protection for the desk and moderation pages. Follow-up: split permissions so the display account cannot reach them (impl review F3, Fix A).
 - The display laptop stays logged in (the Django session lasts 2 weeks by default).
 - Disable the display's screensaver and sleep.
 - Rehearsal games should still be deleted before the event (S-03 plan-review note); hiding is not meant for bulk cleanup.

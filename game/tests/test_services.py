@@ -87,7 +87,7 @@ class PrizeCodeTests(ServiceTestCase):
             GameSession.objects.create(nick='b', deadline_at=now, code=first.code)
 
 
-class RankingTests(ServiceTestCase):
+class RankingFixtureMixin(ServiceTestCase):
     def make(self, solved=0, attempts=0, elapsed=None, finished=True, deadline_in=300):
         now = timezone.now()
         start = now - timedelta(seconds=1000)
@@ -102,6 +102,8 @@ class RankingTests(ServiceTestCase):
     def place(self, game):
         return services.rank_of(game)[0]
 
+
+class RankingTests(RankingFixtureMixin):
     def test_orders_by_solved_then_attempts_then_elapsed(self):
         a = self.make(solved=3, attempts=9, elapsed=100)
         b = self.make(solved=2, attempts=2, elapsed=10)
@@ -144,7 +146,7 @@ class RankingTests(ServiceTestCase):
         self.assertEqual(services.rank_of(self.fresh(done)), (1, 2))
 
 
-class HiddenAndHallTests(RankingTests):
+class HiddenAndHallTests(RankingFixtureMixin):
     def test_hidden_game_is_unranked_and_others_move_up(self):
         a = self.make(solved=3, attempts=1, elapsed=10)
         b = self.make(solved=2, attempts=1, elapsed=10)

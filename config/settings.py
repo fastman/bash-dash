@@ -152,6 +152,6 @@ SANDBOX_QUEUE_TIMEOUT_S = 10
 GAME_DURATION_S = int(os.environ.get('BASHDASH_GAME_DURATION_S', 300))
 
 # Hall of fame screen (S-05)
-HALL_TOP_N = int(os.environ.get('BASHDASH_HALL_TOP_N', 10))
-HALL_RECENT_N = int(os.environ.get('BASHDASH_HALL_RECENT_N', 5))
-HALL_REFRESH_S = int(os.environ.get('BASHDASH_HALL_REFRESH_S', 5))
+HALL_TOP_N = max(1, int(os.environ.get('BASHDASH_HALL_TOP_N', 10)))
+HALL_RECENT_N = max(1, int(os.environ.get('BASHDASH_HALL_RECENT_N', 5)))
+HALL_REFRESH_S = max(1, int(os.environ.get('BASHDASH_HALL_REFRESH_S', 5)))
