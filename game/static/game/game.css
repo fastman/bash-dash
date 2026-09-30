@@ -172,43 +172,80 @@ button:disabled, input:disabled { opacity: 0.6; }
 
 .error { color: var(--red-text); margin: 0; }
 
-.counters {
-  display: flex;
-  justify-content: space-between;
-  font-family: var(--mono);
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.counters strong { color: var(--fg); }
+.counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+.counter { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; transition: border-color 0.3s; }
+.counter .label { display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.counter strong { font-size: 20px; }
+.counter.attempts strong { color: var(--cyan); }
+.counter.solved strong { color: var(--lime); }
 #timer.low { color: var(--yellow); }
+.counter:has(#timer.low) { border-color: var(--yellow); }
+.counters.flash .counter.solved { border-color: var(--lime); }
 
-.index { color: var(--muted); margin: 8px 0 0; font-family: var(--mono); }
+.description { overflow-wrap: anywhere; color: var(--fg-2); margin-bottom: 16px; }
 
-.description { overflow-wrap: anywhere; }
-
-.command {
+.command { display: flex; align-items: stretch; gap: 8px; margin: 0 0 8px; }
+.command-box {
+  position: relative;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 16px 0 8px;
+  padding: 0 12px;
+  background: var(--panel);
+  border: 1.5px solid var(--pink);
+  border-radius: 10px;
+  transition: border-color 0.3s;
 }
+.command.flash .command-box { border-color: var(--lime); }
+.command-box input { border: 0; background: transparent; padding: 12px 0; flex: 1; }
+.command-box input:focus { border: 0; }
+.command-box .cursor { position: absolute; left: calc(12px + 1ch + 8px); top: 50%; margin-top: -0.575em; pointer-events: none; display: none; }
+.command-box input:placeholder-shown { caret-color: transparent; }
+.command-box:has(input:placeholder-shown:not(:disabled)) .cursor { display: inline-block; }
+.command button { flex: none; }
 
-.prompt { color: var(--lime); font-weight: bold; }
+.prompt { color: var(--pink); font-weight: bold; }
 
-.verdict { min-height: 1.5em; margin: 4px 0; font-weight: bold; }
-.verdict.ok { color: var(--lime); }
+.verdict { min-height: 28px; margin: 4px 0 8px; font-weight: bold; }
+.verdict:empty { min-height: 28px; }
+.verdict.running { color: var(--muted); font-weight: normal; }
 .verdict.bad { color: var(--red-text); }
 .verdict.warn { color: var(--yellow); }
-.verdict.running { color: var(--muted); }
+.verdict.ok {
+  background: var(--lime);
+  color: var(--ink);
+  padding: 2px 10px;
+  border-radius: 6px;
+  width: fit-content;
+}
+.verdict.running:not(:empty)::before { content: "\28FE  "; }
+.verdict.bad:not(:empty)::before { content: "\2717  "; }
+.verdict.warn:not(:empty)::before { content: "!  "; }
+.verdict.ok:not(:empty)::before { content: "\2713  "; }
+.verdict.ok.celebrate { animation: pop 0.45s ease-out, glow 0.9s ease-out; }
+@keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes glow { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--lime) 70%, transparent); } to { box-shadow: 0 0 0 14px color-mix(in srgb, var(--lime) 0%, transparent); } }
+@media (prefers-reduced-motion: reduce) {
+  .verdict.ok.celebrate, .cursor { animation: none; }
+  .counter, .command-box { transition: none; }
+}
 
-.last-command { color: var(--muted); margin: 0; font-size: 0.85rem; overflow-wrap: anywhere; }
-
+.output-panel { border: 1px solid var(--border); border-radius: 10px; background: var(--panel); overflow: hidden; }
+.last-command { color: var(--muted); margin: 0; padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; min-height: 2.6em; }
 .output {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 12px;
+  font-size: 13.5px;
+  color: var(--fg);
   max-height: 50vh;
+  min-height: 96px;
   overflow: auto;
   white-space: pre;
-  min-height: 3em;
 }
 
 .done p { font-size: 1.1rem; }

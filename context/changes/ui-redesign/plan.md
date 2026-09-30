@@ -312,8 +312,8 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Automated
 
-- [x] 1.1 Full test suite passes: `uv run python manage.py test`
-- [x] 1.2 Django check passes: `uv run python manage.py check`
+- [x] 1.1 Full test suite passes: `uv run python manage.py test` — 5d20224
+- [x] 1.2 Django check passes: `uv run python manage.py check` — 5d20224
 
 #### Manual
 
@@ -324,8 +324,8 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Automated
 
-- [ ] 2.1 Full test suite passes: `uv run python manage.py test`
-- [ ] 2.2 JS syntax check passes: `node --check game/static/game/play.js`
+- [x] 2.1 Full test suite passes: `uv run python manage.py test`
+- [x] 2.2 JS syntax check passes: `node --check game/static/game/play.js`
 
 #### Manual
 

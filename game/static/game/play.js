@@ -31,6 +31,20 @@
     verdict.className = 'verdict' + (cls ? ' ' + cls : '');
   }
 
+  var flashTimer = null;
+  function celebrate() {
+    verdict.classList.remove('celebrate');
+    void verdict.offsetWidth; // force reflow so the animation restarts
+    verdict.classList.add('celebrate');
+    form.classList.add('flash');
+    document.getElementById('counters').classList.add('flash');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(function () {
+      form.classList.remove('flash');
+      document.getElementById('counters').classList.remove('flash');
+    }, 1100);
+  }
+
   function setBusy(on) {
     busy = on;
     input.disabled = on || locked;
@@ -86,6 +100,7 @@
       output.textContent = data.result.output; // textContent only: output is untrusted
       output.scrollTop = 0;
       setVerdict(data.result.message, data.result.correct ? 'ok' : 'bad');
+      if (data.result.correct) celebrate();
       var ch = data.challenge;
       if (ch && index.textContent !== ch.index + ' / ' + ch.total) {
         index.textContent = ch.index + ' / ' + ch.total;

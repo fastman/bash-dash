@@ -1,25 +1,30 @@
 {% extends 'game/base.html' %}
 {% load static game_text %}
+{% block badge %}<span class="badge pink" id="challenge-index">{{ info.index }} / {{ info.total }}</span>{% endblock %}
 {% block content %}
 <div class="counters" id="counters" data-attempts="{{ game.attempts }}">
-  <span>Attempts: <strong id="attempts">{{ game.attempts }}</strong></span>
-  <span>Solved: <strong id="solved">{{ game.solved }}</strong></span>
-  <span>Time: <strong id="timer" data-remaining-ms="{{ remaining_ms }}">{{ remaining_ms|clock }}</strong></span>
+  <div class="counter attempts"><span class="label">Attempts</span><strong id="attempts">{{ game.attempts }}</strong></div>
+  <div class="counter solved"><span class="label">Solved</span><strong id="solved">{{ game.solved }}</strong></div>
+  <div class="counter time"><span class="label">Time</span><strong id="timer" data-remaining-ms="{{ remaining_ms }}">{{ remaining_ms|clock }}</strong></div>
 </div>
 <section class="challenge">
-  <p class="index" id="challenge-index">{{ info.index }} / {{ info.total }}</p>
   <h1 id="challenge-title">{{ challenge.title }}</h1>
   <div class="description" id="challenge-description">{{ challenge.description|render_description }}</div>
 </section>
 <form id="command-form" class="command" data-url="{% url 'game:command' %}" data-done-url="{% url 'game:done' %}" data-state-url="{% url 'game:state' %}">
-  <span class="prompt">$</span>
-  <input id="command" name="command" type="text" maxlength="300" required
-         autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" enterkeyhint="send"
-         aria-label="Command" {% if not last %}autofocus{% endif %}>
+  <div class="command-box">
+    <span class="prompt">$</span>
+    <input id="command" name="command" type="text" maxlength="300" required placeholder=" "
+           autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" enterkeyhint="send"
+           aria-label="Command" {% if not last %}autofocus{% endif %}>
+    <span class="cursor" aria-hidden="true"></span>
+  </div>
   <button id="submit" type="submit">Run</button>
 </form>
 <p id="verdict" class="verdict{% if last %}{% if last.correct %} ok{% else %} bad{% endif %}{% endif %}">{{ last_verdict }}</p>
-<p id="last-command" class="last-command">{% if last %}$ {{ last.command }}{% endif %}</p>
-<pre id="output" class="output">{% if last %}{{ last.output }}{% endif %}</pre>
+<div class="output-panel">
+  <p id="last-command" class="last-command">{% if last %}$ {{ last.command }}{% endif %}</p>
+  <pre id="output" class="output">{% if last %}{{ last.output }}{% endif %}</pre>
+</div>
 {% endblock %}
 {% block scripts %}<script src="{% static 'game/play.js' %}"></script>{% endblock %}
