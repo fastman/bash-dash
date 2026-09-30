@@ -277,8 +277,8 @@ Each board poll signs one string and encodes one small QR (about version 5–6),
 
 #### Manual
 
-- [ ] 1.5 `/` without a token shows the scan message (no form) and fits 320 px
-- [ ] 1.6 `/?t=<token>` shows the form; Start begins a game; refreshing `/` mid-game resumes `/play`
+- [x] 1.5 `/` without a token shows the scan message (no form) and fits 320 px
+- [x] 1.6 `/?t=<token>` shows the form; Start begins a game; refreshing `/` mid-game resumes `/play`
 
 ### Phase 2: QR on the Hall of fame screen and staff TTL control
 
@@ -291,7 +291,7 @@ Each board poll signs one string and encodes one small QR (about version 5–6),
 
 #### Manual
 
-- [ ] 2.5 QR scans from ~1.5 m with Android and iOS cameras and opens the start form
-- [ ] 2.6 Hall layout fits 1920×1080 and 1366×768; QR rotates about once a minute without a flash
-- [ ] 2.7 TTL 2 min expires an older token; TTL 0 shows the warning and switches to one fixed code (older rotating codes stop working)
-- [ ] 2.8 Moderation page with "Start QR" fits 360 px and 320 px
+- [x] 2.5 QR scans from ~1.5 m with Android and iOS cameras and opens the start form
+- [x] 2.6 Hall layout fits 1920×1080 and 1366×768; QR rotates about once a minute without a flash
+- [x] 2.7 TTL 2 min expires an older token; TTL 0 shows the warning and switches to one fixed code (older rotating codes stop working)
+- [x] 2.8 Moderation page with "Start QR" fits 360 px and 320 px
