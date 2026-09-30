@@ -12,13 +12,16 @@ import re
 import threading
 from dataclasses import dataclass
 from datetime import timedelta
+from urllib.parse import quote
 
+import segno
 from django.conf import settings
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import DurationField, ExpressionWrapper, F, Q
 from django.db.models.functions import Coalesce, Least
+from django.urls import reverse
 from django.utils import timezone
 
 from challenges import catalog, sandbox
@@ -371,3 +374,15 @@ def check_start_token(token, now=None) -> str:
     if ttl and age > ttl:
         return TOKEN_EXPIRED
     return TOKEN_OK
+
+
+def start_url(request, token: str) -> str:
+    path = f'{reverse("game:home")}?t={quote(token)}'
+    if settings.PUBLIC_BASE_URL:
+        return f'{settings.PUBLIC_BASE_URL}{path}'
+    return request.build_absolute_uri(path)
+
+
+def qr_svg(url: str) -> str:
+    """Inline, viewBox-only SVG. Always dark on white: scanners need contrast in any theme."""
+    return segno.make(url, error='m').svg_inline(omitsize=True, border=2, dark='#000', light='#fff')

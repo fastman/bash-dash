@@ -6,4 +6,5 @@ dependencies = [
     "django>=6.1.1",
     "docker>=7.2.0",
     "pyyaml>=6.0.3",
+    "segno>=1.6.6",
 ]

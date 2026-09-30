@@ -270,10 +270,10 @@ Each board poll signs one string and encodes one small QR (about version 5–6),
 
 #### Automated
 
-- [x] 1.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
-- [x] 1.2 Django checks pass: `uv run python manage.py check`
-- [x] 1.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
-- [x] 1.4 Migration applies to the existing dev DB: `uv run python manage.py migrate`
+- [x] 1.1 Game and challenge tests pass: `uv run python manage.py test game challenges` — d496cc0
+- [x] 1.2 Django checks pass: `uv run python manage.py check` — d496cc0
+- [x] 1.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run` — d496cc0
+- [x] 1.4 Migration applies to the existing dev DB: `uv run python manage.py migrate` — d496cc0
 
 #### Manual
 
@@ -284,10 +284,10 @@ Each board poll signs one string and encodes one small QR (about version 5–6),
 
 #### Automated
 
-- [ ] 2.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
-- [ ] 2.2 Django checks pass: `uv run python manage.py check`
-- [ ] 2.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
-- [ ] 2.4 Lockfile is in sync: `uv lock --check`
+- [x] 2.1 Game and challenge tests pass: `uv run python manage.py test game challenges`
+- [x] 2.2 Django checks pass: `uv run python manage.py check`
+- [x] 2.3 No missing migrations: `uv run python manage.py makemigrations --check --dry-run`
+- [x] 2.4 Lockfile is in sync: `uv lock --check`
 
 #### Manual
 

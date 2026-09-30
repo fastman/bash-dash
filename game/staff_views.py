@@ -64,9 +64,15 @@ def _board_context():
             'total': len(catalog.main_set())}
 
 
+def _hall_context(request):
+    ctx = _board_context()
+    ctx['qr_svg'] = services.qr_svg(services.start_url(request, services.issue_start_token()))
+    return ctx
+
+
 @staff_member_required
 def hall(request):
-    ctx = _board_context()
+    ctx = _hall_context(request)
     ctx.update(board_url=reverse('game:staff_hall_board'), refresh_ms=settings.HALL_REFRESH_S * 1000)
     return render(request, 'game/staff/hall.html', ctx)
 
@@ -76,13 +82,15 @@ def hall_board(request):
     # Polled by hall.js: answer 403 (not a login redirect) so the script can detect an expired session.
     if not (request.user.is_active and request.user.is_staff):
         return HttpResponseForbidden('staff login required')
-    return render(request, 'game/staff/_board.html', _board_context())
+    return render(request, 'game/staff/_board.html', _hall_context(request))
 
 
 @staff_member_required
 def moderate(request):
     ctx = _board_context()
     ctx['hidden'] = services.hidden_games()
+    ttl = services.gate_settings().token_ttl_s
+    ctx.update(token_ttl_min=ttl // 60, token_never_expires=ttl == 0)
     return render(request, 'game/staff/moderate.html', ctx)
 
 
@@ -110,3 +118,17 @@ def hide(request):
 def unhide(request):
     return _toggle(request, services.unhide_game, '{nick} is back on the Hall of fame.',
                    '{nick} is not hidden.')
+
+
+@staff_member_required
+@require_POST
+def set_token_ttl(request):
+    try:
+        minutes = int(request.POST.get('minutes', ''))
+        services.set_token_ttl(minutes * 60)
+    except ValueError:
+        messages.error(request, 'Enter 0 or 2–1440 minutes.')
+    else:
+        messages.success(request, f'QR codes now expire after {minutes} min.' if minutes
+                         else 'QR codes now never expire.')
+    return redirect('game:staff_moderate')
