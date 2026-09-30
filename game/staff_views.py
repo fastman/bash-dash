@@ -75,7 +75,8 @@ def _hall_context(request):
 @staff_member_required
 def hall(request):
     ctx = _hall_context(request)
-    ctx.update(board_url=reverse('game:staff_hall_board'), refresh_ms=settings.HALL_REFRESH_S * 1000)
+    ctx.update(board_url=reverse('game:staff_hall_board'), refresh_ms=settings.HALL_REFRESH_S * 1000,
+               duration=settings.GAME_DURATION_S)
     return render(request, 'game/staff/hall.html', ctx)
 
 

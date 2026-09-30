@@ -17,6 +17,7 @@
   var title = document.getElementById('challenge-title');
   var description = document.getElementById('challenge-description');
   var timer = document.getElementById('timer');
+  var counters = document.getElementById('counters');
   var busy = false;
   var locked = false; // time is up: separate from busy so an in-flight response can't re-enable input
   var deadline = performance.now() + Number(timer.dataset.remainingMs); // monotonic, never Date.now()
@@ -37,11 +38,11 @@
     void verdict.offsetWidth; // force reflow so the animation restarts
     verdict.classList.add('celebrate');
     form.classList.add('flash');
-    document.getElementById('counters').classList.add('flash');
+    counters.classList.add('flash');
     clearTimeout(flashTimer);
     flashTimer = setTimeout(function () {
       form.classList.remove('flash');
-      document.getElementById('counters').classList.remove('flash');
+      counters.classList.remove('flash');
     }, 1100);
   }
 

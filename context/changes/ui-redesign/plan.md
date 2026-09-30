@@ -317,8 +317,8 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Manual
 
-- [ ] 1.3 All existing pages render with the new dark palette and monospace font, with no broken layout
-- [ ] 1.4 Logo renders on one line per row at 390px, no horizontal page scroll
+- [x] 1.3 All existing pages render with the new dark palette and monospace font, with no broken layout
+- [x] 1.4 Logo renders on one line per row at 390px, no horizontal page scroll
 
 ### Phase 2: Play screen and correct-answer effect
 
@@ -329,14 +329,14 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Manual
 
-- [ ] 2.3 Play screen matches the mockup at 390px: header badge, three counter boxes, command box, Run button, output panel
-- [ ] 2.4 Wrong answer shows red "✗ …"; network/warn shows yellow "! …"; running shows "⣾ Running…"
-- [ ] 2.5 Correct answer shows the lime "✓ …" badge with pop and glow, and the command and SOLVED borders flash lime for about 1 s
-- [ ] 2.6 Two correct answers in a row both play the animation
-- [ ] 2.7 Timer at or under 30 s turns yellow with a yellow box border
-- [ ] 2.8 The cursor overlay shows in the empty input, hides once you type, and the native caret is not doubled
-- [ ] 2.9 With OS "reduce motion" on, no pop/glow/blink animation runs
-- [ ] 2.10 Challenge switch after a correct answer still updates title, description and index and clears the input
+- [x] 2.3 Play screen matches the mockup at 390px: header badge, three counter boxes, command box, Run button, output panel
+- [x] 2.4 Wrong answer shows red "✗ …"; network/warn shows yellow "! …"; running shows "⣾ Running…"
+- [x] 2.5 Correct answer shows the lime "✓ …" badge with pop and glow, and the command and SOLVED borders flash lime for about 1 s
+- [x] 2.6 Two correct answers in a row both play the animation
+- [x] 2.7 Timer at or under 30 s turns yellow with a yellow box border
+- [x] 2.8 The cursor overlay shows in the empty input, hides once you type, and the native caret is not doubled
+- [x] 2.9 With OS "reduce motion" on, no pop/glow/blink animation runs
+- [x] 2.10 Challenge switch after a correct answer still updates title, description and index and clears the input
 
 ### Phase 3: Player pages (gate, home, done)
 
@@ -346,9 +346,9 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Manual
 
-- [ ] 3.2 Gate (with no code, an expired code and an invalid code), home (with and without a nick error) and done (time's up, all solved, finished; ranked and not ranked) match the mockup at 390px
-- [ ] 3.3 Prize code is easy to select and copy in one tap
-- [ ] 3.4 Logo fits without horizontal scroll at 320–390px, and scales up on a desktop-width window
+- [x] 3.2 Gate (with no code, an expired code and an invalid code), home (with and without a nick error) and done (time's up, all solved, finished; ranked and not ranked) match the mockup at 390px
+- [x] 3.3 Prize code is easy to select and copy in one tap
+- [x] 3.4 Logo fits without horizontal scroll at 320–390px, and scales up on a desktop-width window
 
 ### Phase 4: Hall of fame
 
@@ -358,10 +358,10 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Manual
 
-- [ ] 4.2 At 1600×900 the hall matches the mockup with about 10 top rows and 5 recent rows (HALL_RECENT_N), with no scrolling
-- [ ] 4.3 Long nicks are ellipsised; the QR is readable and scannable from a phone
-- [ ] 4.4 Polling refresh keeps the layout intact (wait for one refresh), and the "Reconnecting…" badge appears bottom-right when the server is stopped
-- [ ] 4.5 Below 900px the layout stacks into one column
+- [x] 4.2 At 1600×900 the hall matches the mockup with about 10 top rows and 5 recent rows (HALL_RECENT_N), with no scrolling
+- [x] 4.3 Long nicks are ellipsised; the QR is readable and scannable from a phone
+- [x] 4.4 Polling refresh keeps the layout intact (wait for one refresh), and the "Reconnecting…" badge appears bottom-right when the server is stopped
+- [x] 4.5 Below 900px the layout stacks into one column
 
 ### Phase 5: Staff pages (prize desk, moderation)
 
@@ -372,7 +372,7 @@ None. Static files are served by WhiteNoise; rebuild or `collectstatic` as the e
 
 #### Manual
 
-- [ ] 5.3 Prize desk matches the mockup in its states: empty, found and finished, already given, in progress, unranked or hidden, and error/success notices
-- [ ] 5.4 Moderation matches the mockup with top, recent and hidden lists populated and empty
-- [ ] 5.5 Buttons are comfortable to tap at 390px (44/56 px targets), with no horizontal scroll
-- [ ] 5.6 Hide, Unhide, Mark prize given and Save still work end to end
+- [x] 5.3 Prize desk matches the mockup in its states: empty, found and finished, already given, in progress, unranked or hidden, and error/success notices
+- [x] 5.4 Moderation matches the mockup with top, recent and hidden lists populated and empty
+- [x] 5.5 Buttons are comfortable to tap at 390px (44/56 px targets), with no horizontal scroll
+- [x] 5.6 Hide, Unhide, Mark prize given and Save still work end to end

@@ -1,10 +1,10 @@
 {% extends 'game/base.html' %}
-{% load static %}
+{% load static game_text %}
 {% block title %}Hall of fame{% endblock %}
 {% block main_class %}hall{% endblock %}
 {% block header %}<header class="hall-header">
   {% include 'game/_logo.html' %}
-  <p class="hall-tagline">5 minutes · bash only · <span class="cursor" aria-hidden="true"></span></p>
+  <p class="hall-tagline">{{ duration|duration_text }} · bash only · <span class="cursor" aria-hidden="true"></span></p>
 </header>{% endblock %}
 {% block content %}
 <div id="board" data-board-url="{{ board_url }}" data-refresh-ms="{{ refresh_ms }}">

@@ -1,5 +1,5 @@
 <section class="hall-top">
-  <div class="rule"><span class="badge pink">Hall of fame</span></div>
+  <h2 class="rule"><span class="badge pink">Hall of fame</span></h2>
   {% if board.top %}
   <ol class="hall-rows">
     {% for r in board.top %}
@@ -9,7 +9,7 @@
   {% else %}<p class="muted">No finished games yet</p>{% endif %}
 </section>
 <section class="hall-recent">
-  <div class="rule"><span class="badge lime">Just finished</span></div>
+  <h2 class="rule"><span class="badge lime">Just finished</span></h2>
   {% if board.recent %}
   <ol class="hall-rows">
     {% for r in board.recent %}
