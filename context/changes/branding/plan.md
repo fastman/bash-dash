@@ -255,6 +255,6 @@ None. No data or schema changes. Static file is picked up by `collectstatic` at 
 
 #### Manual
 
-- [ ] 2.4 Booth screen matches mockup screen 02; all rows visible without scroll
+- [x] 2.4 Booth screen matches mockup screen 02; all rows visible without scroll
 - [x] 2.5 ≤900px layout stacks with 48px left-aligned logo
 - [x] 2.6 Board polling and hall-status badge still work
