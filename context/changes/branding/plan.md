@@ -249,9 +249,9 @@ None. No data or schema changes. Static file is picked up by `collectstatic` at 
 
 #### Automated
 
-- [x] 2.1 Full test suite passes: `uv run python manage.py test`
-- [x] 2.2 Django check passes: `uv run python manage.py check`
-- [x] 2.3 Hall content height at 1600×900 with 10 top + 5 recent rows ≤ 900px (measured 874px, headless Chrome)
+- [x] 2.1 Full test suite passes: `uv run python manage.py test` — a1c1261
+- [x] 2.2 Django check passes: `uv run python manage.py check` — a1c1261
+- [x] 2.3 Hall content height at 1600×900 with 10 top + 5 recent rows ≤ 900px (measured 874px, headless Chrome) — a1c1261
 
 #### Manual
 
