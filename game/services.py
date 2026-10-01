@@ -35,9 +35,11 @@ logger = logging.getLogger('game')
 # Query form of GameSession.timed_out: finished by the clock, still on a challenge.
 TIMED_OUT_Q = Q(finished_at=F('deadline_at'), current_slug__isnull=False)
 
-NICK_MAX_CHARS = 12
-NICK_RE = re.compile(rf'[A-Za-z0-9_]{{1,{NICK_MAX_CHARS}}}')  # use with fullmatch
+NICK_MAX_CHARS = 64
+# Allow email addresses too: letters, digits, _ and . + @
+NICK_RE = re.compile(rf'[A-Za-z0-9_.+@]{{1,{NICK_MAX_CHARS}}}')  # use with fullmatch
 NICK_HTML_PATTERN = rf' *{NICK_RE.pattern} *'  # browser pattern: start_game trims outer spaces
+NICK_CHARS_DESC = 'letters, digits, _ . + @'  # human-readable allowed set (for hints/errors)
 CODE_RE = re.compile(r'^\d{6}$')
 CODE_ATTEMPTS = 10
 CORRECT_ANSWER_BONUS_MAX_S = 3600
@@ -84,7 +86,7 @@ def _reset_semaphore() -> None:
 def start_game(nick: str) -> GameSession:
     nick = nick.strip()
     if not NICK_RE.fullmatch(nick):
-        raise ValueError(f'nick must be 1-{NICK_MAX_CHARS} ASCII letters, digits or underscores')
+        raise ValueError(f'nick must be 1-{NICK_MAX_CHARS} characters: {NICK_CHARS_DESC}')
     first = catalog.first_playable()
     if first is None:
         raise RuntimeError('no playable challenges')

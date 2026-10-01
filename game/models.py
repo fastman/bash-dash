@@ -21,7 +21,7 @@ class GameSession(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    nick = models.CharField(max_length=20)
+    nick = models.CharField(max_length=64)
     # default (not auto_now_add) so start_game can store one instant in started_at and deadline_at.
     started_at = models.DateTimeField(default=timezone.now, db_index=True)
     deadline_at = models.DateTimeField(db_index=True)

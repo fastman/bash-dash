@@ -83,7 +83,7 @@ class HomeAndStartTests(ViewTestCase):
         token = services.issue_start_token()
         resp = self.client.post(reverse('game:start'), {'nick': 'bad nick!', 't': token})
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Use 1-12 letters, digits or _ (no spaces).')
+        self.assertContains(resp, f'Use 1-{services.NICK_MAX_CHARS} {services.NICK_CHARS_DESC} (no spaces).')
         self.assertContains(resp, 'value="bad nick!"')
         self.assertContains(resp, f'name="t" value="{token}"')
         self.assertEqual(GameSession.objects.count(), 0)

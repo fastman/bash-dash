@@ -49,14 +49,14 @@ class StartGameTests(ServiceTestCase):
         self.assertFalse(game.is_finished)
 
     def test_empty_too_long_and_disallowed_nicks_are_rejected(self):
-        bad = ('', '   ', 'x' * 13, 'ab cd', 'abc-def', 'zażółć', 'neo!', '<b>x</b>', 'a\nb', '٣')
+        bad = ('', '   ', 'x' * 65, 'ab cd', 'abc-def', 'zażółć', 'neo!', '<b>x</b>', 'a\nb', '٣')
         for nick in bad:
             with self.assertRaises(ValueError, msg=repr(nick)):
                 services.start_game(nick)
         self.assertEqual(GameSession.objects.count(), 0)
 
     def test_valid_nicks_are_accepted_and_stripped(self):
-        for nick in ('x' * 12, 'Neo_42', '_', '123'):
+        for nick in ('x' * 64, 'Neo_42', '_', '123', 'neo.smith+tag@example.com', 'a+b@c.d'):
             self.assertEqual(services.start_game(nick).nick, nick)
         self.assertEqual(services.start_game('  neo_1  ').nick, 'neo_1')
 

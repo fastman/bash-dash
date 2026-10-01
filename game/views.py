@@ -81,6 +81,19 @@ def _redirect_existing(game: GameSession):
     return redirect('game:done' if game.is_finished else 'game:play')
 
 
+def _home_context(token, **extra) -> dict:
+    """Context for game/home.html; the nick constraints drive the start form's hint and browser check."""
+    return {
+        'duration': settings.GAME_DURATION_S,
+        'correct_answer_bonus_s': services.game_settings().correct_answer_bonus_s,
+        'token': token,
+        'nick_max': services.NICK_MAX_CHARS,
+        'nick_pattern': services.NICK_HTML_PATTERN,
+        'nick_desc': services.NICK_CHARS_DESC,
+        **extra,
+    }
+
+
 def _gate_refusal(request, token):
     """403 refusal page when ``token`` is not a valid start token, else None."""
     status = services.check_start_token(token)
@@ -100,11 +113,8 @@ def home(request):
     refusal = _gate_refusal(request, token)
     if refusal:
         return refusal
-    return render(request, 'game/home.html', {
-        'duration': settings.GAME_DURATION_S,
-        'correct_answer_bonus_s': services.game_settings().correct_answer_bonus_s,
-        'token': token,
-    })
+
+    return render(request, 'game/home.html', _home_context(token))
 
 
 @require_POST
@@ -120,10 +130,8 @@ def start(request):
     try:
         game = services.start_game(nick)
     except ValueError:
-        return render(request, 'game/home.html', {
-            'duration': settings.GAME_DURATION_S, 'token': token,
-            'correct_answer_bonus_s': services.game_settings().correct_answer_bonus_s,
-            'error': f'Use 1-{services.NICK_MAX_CHARS} letters, digits or _ (no spaces).', 'nick': nick})
+        return render(request, 'game/home.html', _home_context(
+            token, error=f'Use 1-{services.NICK_MAX_CHARS} {services.NICK_CHARS_DESC} (no spaces).', nick=nick))
     request.session['game_id'] = str(game.pk)
     return redirect('game:play')
 
