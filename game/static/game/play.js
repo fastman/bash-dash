@@ -20,6 +20,7 @@
   var counters = document.getElementById('counters');
   var busy = false;
   var locked = false; // time is up: separate from busy so an in-flight response can't re-enable input
+  var previousCommand = '';
   var deadline = performance.now() + Number(timer.dataset.remainingMs); // monotonic, never Date.now()
 
   function csrfToken() {
@@ -97,6 +98,7 @@
     if (typeof data.solved === 'number') solved.textContent = data.solved;
     if (typeof data.remaining_ms === 'number') setRemaining(data.remaining_ms);
     if (data.status === 'ran') {
+      previousCommand = command;
       lastCommand.textContent = '$ ' + command;
       output.textContent = data.result.output; // textContent only: output is untrusted
       output.scrollTop = 0;
@@ -117,6 +119,13 @@
     }
     if (data.finished) goDone();
   }
+
+  input.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'ArrowUp' || !previousCommand) return;
+    ev.preventDefault();
+    input.value = previousCommand;
+    input.setSelectionRange(input.value.length, input.value.length);
+  });
 
   form.addEventListener('submit', function (ev) {
     ev.preventDefault();
