@@ -100,7 +100,11 @@ def home(request):
     refusal = _gate_refusal(request, token)
     if refusal:
         return refusal
-    return render(request, 'game/home.html', {'duration': settings.GAME_DURATION_S, 'token': token})
+    return render(request, 'game/home.html', {
+        'duration': settings.GAME_DURATION_S,
+        'correct_answer_bonus_s': services.game_settings().correct_answer_bonus_s,
+        'token': token,
+    })
 
 
 @require_POST
@@ -118,6 +122,7 @@ def start(request):
     except ValueError:
         return render(request, 'game/home.html', {
             'duration': settings.GAME_DURATION_S, 'token': token,
+            'correct_answer_bonus_s': services.game_settings().correct_answer_bonus_s,
             'error': f'Use 1-{services.NICK_MAX_CHARS} letters, digits or _ (no spaces).', 'nick': nick})
     request.session['game_id'] = str(game.pk)
     return redirect('game:play')

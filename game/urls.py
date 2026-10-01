@@ -18,5 +18,7 @@ urlpatterns = [
     path('staff/hide', staff_views.hide, name='staff_hide'),
     path('staff/unhide', staff_views.unhide, name='staff_unhide'),
     path('staff/token-ttl', staff_views.set_token_ttl, name='staff_token_ttl'),
+    path('staff/correct-answer-bonus', staff_views.set_correct_answer_bonus,
+         name='staff_correct_answer_bonus'),
     path('staff/prize', staff_views.give_prize, name='staff_prize'),
 ]

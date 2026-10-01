@@ -28,7 +28,7 @@ from django.utils import timezone
 from challenges import catalog, sandbox
 from challenges.catalog import Challenge
 
-from .models import Attempt, GameSession, GateSettings, generate_code
+from .models import Attempt, GameSession, GameSettings, GateSettings, generate_code
 
 logger = logging.getLogger('game')
 
@@ -40,6 +40,7 @@ NICK_RE = re.compile(rf'[A-Za-z0-9_]{{1,{NICK_MAX_CHARS}}}')  # use with fullmat
 NICK_HTML_PATTERN = rf' *{NICK_RE.pattern} *'  # browser pattern: start_game trims outer spaces
 CODE_RE = re.compile(r'^\d{6}$')
 CODE_ATTEMPTS = 10
+CORRECT_ANSWER_BONUS_MAX_S = 3600
 
 # SubmitOutcome.status values. Only RAN is counted as an attempt.
 RAN = 'ran'
@@ -278,13 +279,21 @@ def _record(game: GameSession, challenge: Challenge, command: str, result: sandb
         if result.correct:
             nxt = catalog.next_playable(challenge.slug)
             # The current_slug guard makes a duplicate correct submit advance once.
-            # Timestamps are capped at the deadline; an existing finished_at is never cleared or moved.
+            # Timestamps are capped at the pre-bonus deadline. A command submitted in time may
+            # reopen a timeout that was recorded while its sandbox run was still in progress.
             stamp = Least(now, F('deadline_at'))
+            updates = {
+                'solved': F('solved') + 1,
+                'last_solved_at': stamp,
+                'current_slug': nxt.slug if nxt else None,
+                'finished_at': None if nxt else Coalesce(F('finished_at'), stamp),
+            }
+            if nxt:
+                updates['deadline_at'] = (
+                    F('deadline_at') + timedelta(seconds=game_settings().correct_answer_bonus_s)
+                )
             GameSession.objects.filter(pk=game.pk, current_slug=challenge.slug).update(
-                solved=F('solved') + 1,
-                last_solved_at=stamp,
-                current_slug=nxt.slug if nxt else None,
-                finished_at=Coalesce(F('finished_at'), stamp) if not nxt else F('finished_at'),
+                **updates,
             )
     return True
 
@@ -326,6 +335,19 @@ def solve_time(game: GameSession) -> timedelta | None:
     if game.last_solved_at is None:
         return None
     return game.last_solved_at - game.started_at
+
+
+def game_settings() -> GameSettings:
+    return GameSettings.objects.get_or_create(pk=1)[0]
+
+
+def set_correct_answer_bonus(seconds: int) -> GameSettings:
+    if not 0 <= seconds <= CORRECT_ANSWER_BONUS_MAX_S:
+        raise ValueError(f'bonus must be 0-{CORRECT_ANSWER_BONUS_MAX_S} seconds')
+    obj = game_settings()
+    obj.correct_answer_bonus_s = seconds
+    obj.save()
+    return obj
 
 
 # QR start gate (S-06)

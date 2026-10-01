@@ -423,6 +423,46 @@ class TokenTtlTests(StaffTestCase):
         self.assertNotIn('QR codes never expire', html)
 
 
+class CorrectAnswerBonusTests(StaffTestCase):
+    def setUp(self):
+        super().setUp()
+        self.url = reverse('game:staff_correct_answer_bonus')
+        self.moderate = reverse('game:staff_moderate')
+
+    def test_valid_seconds_are_saved(self):
+        resp = self.client.post(self.url, {'seconds': '42'}, follow=True)
+        self.assertRedirects(resp, self.moderate)
+        self.assertEqual(services.game_settings().correct_answer_bonus_s, 42)
+        self.assertContains(resp, 'Correct answers now add 42 seconds.')
+        self.assertRegex(resp.content.decode(), r'name="seconds"[^>]*value="42"')
+
+    def test_zero_disables_bonus(self):
+        resp = self.client.post(self.url, {'seconds': '0'}, follow=True)
+        self.assertContains(resp, 'Correct answers now add 0 seconds.')
+        self.assertEqual(services.game_settings().correct_answer_bonus_s, 0)
+
+    def test_invalid_values_leave_bonus_unchanged(self):
+        before = services.game_settings().correct_answer_bonus_s
+        for bad in ('abc', '-1', str(services.CORRECT_ANSWER_BONUS_MAX_S + 1), ''):
+            resp = self.client.post(self.url, {'seconds': bad}, follow=True)
+            self.assertContains(resp, f'Enter 0–{services.CORRECT_ANSWER_BONUS_MAX_S} seconds.')
+        self.assertEqual(services.game_settings().correct_answer_bonus_s, before)
+
+    def test_access_rules(self):
+        anon = Client()
+        resp = anon.post(self.url, {'seconds': '15'})
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/login/', resp['Location'])
+        csrf = Client(enforce_csrf_checks=True)
+        csrf.force_login(self.staff)
+        self.assertEqual(csrf.post(self.url, {'seconds': '15'}).status_code, 403)
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_moderate_shows_default_bonus(self):
+        self.assertRegex(self.client.get(self.moderate).content.decode(),
+                         r'name="seconds"[^>]*value="15"')
+
+
 class QrSvgTests(TestCase):
     def test_qr_svg_is_inline_svg_with_viewbox(self):
         svg = services.qr_svg('https://dash.example/?t=abc')

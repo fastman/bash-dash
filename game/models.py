@@ -82,3 +82,10 @@ class GateSettings(models.Model):
 
     token_ttl_s = models.PositiveIntegerField()  # 0 = tokens never expire
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class GameSettings(models.Model):
+    """Staff-editable game settings. Singleton: the only row is ``pk=1``."""
+
+    correct_answer_bonus_s = models.PositiveIntegerField(default=15)
+    updated_at = models.DateTimeField(auto_now=True)

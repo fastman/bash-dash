@@ -56,6 +56,16 @@ class HomeAndStartTests(ViewTestCase):
         self.assertContains(resp, 'Start')
         self.assertContains(resp, 'attempt')
         self.assertContains(resp, '5 minutes')
+        self.assertContains(resp, 'Every correct answer adds <strong>15 seconds</strong>')
+
+    def test_home_uses_configured_bonus_and_hides_disabled_bonus(self):
+        token = services.issue_start_token()
+        services.set_correct_answer_bonus(42)
+        self.assertContains(self.client.get(reverse('game:home'), {'t': token}),
+                            'Every correct answer adds <strong>42 seconds</strong>')
+        services.set_correct_answer_bonus(0)
+        self.assertNotContains(self.client.get(reverse('game:home'), {'t': token}),
+                               'Every correct answer adds')
 
     def test_start_with_valid_nick_sets_session_and_redirects_to_play(self):
         resp = self.start('neo')

@@ -10,6 +10,7 @@
     <li>Every command you run counts as an attempt, including <code>ls</code> and <code>cat</code>.</li>
     <li>Fewer attempts is better.</li>
     <li>You have <strong class="duration">{{ duration|duration_text }}</strong>.</li>
+    {% if correct_answer_bonus_s %}<li>Every correct answer adds <strong>{{ correct_answer_bonus_s }} seconds</strong> to your remaining time.</li>{% endif %}
   </ul>
 </section>
 <form method="post" action="{% url 'game:start' %}" class="start">

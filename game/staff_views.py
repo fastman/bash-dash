@@ -93,7 +93,9 @@ def moderate(request):
     ctx = _board_context()
     ctx['hidden'] = services.hidden_games()
     ttl = services.gate_settings().token_ttl_s
-    ctx.update(token_ttl_min=ttl // 60, token_never_expires=ttl == 0)
+    ctx.update(token_ttl_min=ttl // 60, token_never_expires=ttl == 0,
+               correct_answer_bonus_s=services.game_settings().correct_answer_bonus_s,
+               correct_answer_bonus_max_s=services.CORRECT_ANSWER_BONUS_MAX_S)
     return render(request, 'game/staff/moderate.html', ctx)
 
 
@@ -134,4 +136,17 @@ def set_token_ttl(request):
     else:
         messages.success(request, f'QR codes now expire after {minutes} min.' if minutes
                          else 'QR codes now never expire.')
+    return redirect('game:staff_moderate')
+
+
+@staff_member_required
+@require_POST
+def set_correct_answer_bonus(request):
+    try:
+        seconds = int(request.POST.get('seconds', ''))
+        services.set_correct_answer_bonus(seconds)
+    except ValueError:
+        messages.error(request, f'Enter 0–{services.CORRECT_ANSWER_BONUS_MAX_S} seconds.')
+    else:
+        messages.success(request, f'Correct answers now add {seconds} seconds.')
     return redirect('game:staff_moderate')

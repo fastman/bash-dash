@@ -55,8 +55,9 @@ w Hall of fame. Firma (rekrutacja) jest beneficjentem, a nie bezpośrednim użyt
 - Ranking i kody przetrwają awarię i odtworzenie serwisu.
 - Żaden gracz nie może swoją komendą (np. fork bombą czy zajęciem CPU) zablokować gry innym ani
   zepsuć serwisu.
-- Gracz nie może wydłużyć ani zresetować limitu 5 minut (np. odświeżeniem strony czy zmianą
-  zegara w telefonie), a komendy wysłane po czasie się nie liczą.
+- Gracz nie może samodzielnie wydłużyć ani zresetować czasu (np. odświeżeniem strony czy zmianą
+  zegara w telefonie). Każda poprawna odpowiedź dodaje ustawiany przez obsługę bonus czasu,
+  domyślnie 15 sekund, a komendy wysłane po czasie się nie liczą.
 
 ## User Stories
 
@@ -109,6 +110,8 @@ Numeracja jest stabilna. FR-009, FR-014 i FR-015 usunięto w rundzie sokratejski
 - FR-007: Gracz może grać do upływu 5 minut albo do rozwiązania wszystkich zadań. Wtedy gra się kończy. Priority: must-have
   > Socrates: Rozważono „5 minut to za mało” i „pisanie na telefonie”. Brak kontrargumentu;
   > FR stoi jak jest.
+- FR-018: Po każdej poprawnej odpowiedzi serwer wydłuża pozostały czas o bonus ustawiany przez
+  obsługę (domyślnie 15 sekund; 0 wyłącza bonus). Priority: must-have
 
 ### Podsumowanie
 - FR-008: Gracz może zobaczyć liczbę rozwiązanych zadań, liczbę podejść, miejsce w rankingu i unikalny 6-cyfrowy kod. Priority: must-have
@@ -183,7 +186,7 @@ Trzy role, bez kont użytkowników:
 | Rola | Jak wchodzi | Co może |
 |---|---|---|
 | **Gracz** (uczestnik) | Skanuje kod QR wyświetlany na ekranie przy stoisku. Adres zawiera krótko ważny token (ok. 15 min). Podaje nick (wymagany, nieunikalny). E-maila nie zbieramy. | Rozpocząć sesję gry, wysyłać komendy, zobaczyć podsumowanie i swój 6-cyfrowy kod. |
-| **Obsługa stoiska** | Logowanie hasłem. | Oglądać Hall of fame razem z aktualnym kodem QR (widok na ekran przy stoisku), ustawiać czas ważności tokenu, wyszukiwać po kodzie, ukrywać nicki (dyskwalifikacja), oznaczać wydanie nagrody. |
+| **Obsługa stoiska** | Logowanie hasłem. | Oglądać Hall of fame razem z aktualnym kodem QR (widok na ekran przy stoisku), ustawiać czas ważności tokenu i bonus czasu za poprawną odpowiedź, wyszukiwać po kodzie, ukrywać nicki (dyskwalifikacja), oznaczać wydanie nagrody. |
 
 - Nie ma publicznego rankingu. Hall of fame razem z QR widzi tylko zalogowana obsługa, która
   wyświetla go na ekranie przy stoisku.
