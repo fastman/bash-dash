@@ -101,7 +101,7 @@ Ship the logo asset and the sponsor footer on gate, home, play and done. Keep it
 
 **Contract**:
 - Narrow `NoAnswerLinksTests` so that the only external `<a href>` allowed on gate/home/play/done points to the host `camlingroup.com` (scheme `https`). Any other external host still fails. Suggested approach: collect all external hrefs with a capturing regex and assert each host equals `camlingroup.com`, rather than deleting the guard.
-- Add a test that each of gate (no token), home (with token), play and done contains `class="sponsor"`, `href="https://camlingroup.com/"`, `rel="noopener"` and `alt="Camlin Group"`.
+- Add a test that each of gate (no token), home (with token), play and done contains `class="sponsor"`, `href="https://camlingroup.com/"`, `rel="noopener"` and `alt="Camlin Group"`. Note: the gate (home without a token) answers **403**, so its `assertContains` needs `status_code=403` (as the existing gate tests at `test_views.py:94-115` do).
 - Add a test that `django.contrib.staticfiles.finders.find('game/camlin-logo.png')` returns a path.
 
 **File**: `game/tests/test_staff_views.py`
