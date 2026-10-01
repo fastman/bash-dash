@@ -239,10 +239,10 @@ None. No data or schema changes. Static file is picked up by `collectstatic` at 
 
 #### Manual
 
-- [ ] 1.5 Footer at bottom on gate/home/play/done at 390px, matches mockup screens 01–05
+- [x] 1.5 Footer at bottom on gate/home/play/done at 390px, matches mockup screens 01–05
 - [x] 1.6 Existing spacing on gate/home/done unchanged (headless Chrome 390px, before/after element offsets identical on gate/home/play) — ab08e25
-- [ ] 1.7 Footer below output on a long play page
-- [ ] 1.8 Link opens camlingroup.com in a new tab; game tab keeps running
+- [x] 1.7 Footer below output on a long play page
+- [x] 1.8 Link opens camlingroup.com in a new tab; game tab keeps running
 - [x] 1.9 No footer on prize desk and moderation (covered by StaffNoSponsorFooterTests) — ab08e25
 
 ### Phase 2: Hall Header Branding
@@ -256,5 +256,5 @@ None. No data or schema changes. Static file is picked up by `collectstatic` at 
 #### Manual
 
 - [ ] 2.4 Booth screen matches mockup screen 02; all rows visible without scroll
-- [ ] 2.5 ≤900px layout stacks with 48px left-aligned logo
-- [ ] 2.6 Board polling and hall-status badge still work
+- [x] 2.5 ≤900px layout stacks with 48px left-aligned logo
+- [x] 2.6 Board polling and hall-status badge still work
