@@ -91,7 +91,7 @@ Ship the logo asset and the sponsor footer on gate, home, play and done. Keep it
 
 **Intent**: Style the footer per the handoff and pin it to the bottom on short pages.
 
-**Contract**: `main:not(.hall)` becomes a flex column with `min-height: 100vh` and then `min-height: 100dvh`. `.sponsor` uses `margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-soft)`, centred flex with a 12px gap, `font-size: 13px`, no underline on the anchor. `.sponsor img`: `height: 22px; width: auto; display: block`. `.sponsor span`: cyan, underlined, `text-underline-offset: 3px`. Optionally give the wrapper `margin-bottom` (~32px) so long pages keep breathing room above the footer rule. Do **not** change the `main` padding or any existing rule.
+**Contract**: `main:not(.hall)` becomes a flex column with `min-height: 100vh` and then `min-height: 100dvh`. `.sponsor` uses `margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-soft)`, centred flex with a 12px gap, `font-size: 13px`, no underline on the anchor. `.sponsor img`: `height: 22px; width: auto; display: block`. `.sponsor span`: cyan, underlined, `text-underline-offset: 3px`. Give the wrapper `.page { margin-bottom: 32px }` so there is a 32px gap between content and the footer rule (decision F2, committed). Do **not** change the `main` padding or any existing rule.
 
 #### 5. Tests
 
@@ -132,6 +132,8 @@ Ship the logo asset and the sponsor footer on gate, home, play and done. Keep it
 ---
 
 ## Phase 2: Hall Header Branding
+
+> Decisions (plan review): F4 - the booth display is not touch, so the hall Camlin logo stays a link (`target="_blank"`). F3 - rely on the confirmed 874px measurement; if re-measuring, `game.css` contains backslashes, so use a function replacement with `re.sub`.
 
 ### Overview
 
@@ -228,18 +230,18 @@ None. No data or schema changes. Static file is picked up by `collectstatic` at 
 
 #### Automated
 
-- [ ] 1.1 Full test suite passes: `uv run python manage.py test`
-- [ ] 1.2 Django check passes: `uv run python manage.py check`
-- [ ] 1.3 Logo is collected: `uv run python manage.py findstatic game/camlin-logo.png`
-- [ ] 1.4 Narrowed guard still bites: temporary `https://example.com/` link makes `NoAnswerLinksTests` fail
+- [x] 1.1 Full test suite passes: `uv run python manage.py test`
+- [x] 1.2 Django check passes: `uv run python manage.py check`
+- [x] 1.3 Logo is collected: `uv run python manage.py findstatic game/camlin-logo.png`
+- [x] 1.4 Narrowed guard still bites: temporary `https://example.com/` link makes `NoAnswerLinksTests` fail
 
 #### Manual
 
 - [ ] 1.5 Footer at bottom on gate/home/play/done at 390px, matches mockup screens 01–05
-- [ ] 1.6 Existing spacing on gate/home/done unchanged
+- [x] 1.6 Existing spacing on gate/home/done unchanged (headless Chrome 390px, before/after element offsets identical on gate/home/play)
 - [ ] 1.7 Footer below output on a long play page
 - [ ] 1.8 Link opens camlingroup.com in a new tab; game tab keeps running
-- [ ] 1.9 No footer on prize desk and moderation
+- [x] 1.9 No footer on prize desk and moderation (covered by StaffNoSponsorFooterTests)
 
 ### Phase 2: Hall Header Branding
 

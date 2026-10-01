@@ -47,6 +47,29 @@ main {
 
 a { color: var(--cyan); }
 
+/* Player pages: sponsor footer pinned to the viewport bottom on short pages.
+   Header + content live in one block-flow .page wrapper so their margins keep collapsing. */
+main:not(.hall) {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.page { margin-bottom: 32px; }
+.sponsor {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 13px;
+  text-decoration: none;
+}
+.sponsor img { height: 22px; width: auto; display: block; }
+.sponsor span { color: var(--cyan); text-decoration: underline; text-underline-offset: 3px; }
+
 h1 { font-size: 21px; line-height: 1.3; margin: 4px 0 8px; font-weight: bold; }
 h2 { font-size: 16px; margin: 20px 0 8px; }
 

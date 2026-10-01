@@ -6,6 +6,7 @@
   {% include 'game/_logo.html' %}
   <p class="hall-tagline">{{ duration|duration_text }} · bash only · <span class="cursor" aria-hidden="true"></span></p>
 </header>{% endblock %}
+{% block sponsor %}{% endblock %}
 {% block content %}
 <div id="board" data-board-url="{{ board_url }}" data-refresh-ms="{{ refresh_ms }}">
 {% include 'game/staff/_board.html' %}

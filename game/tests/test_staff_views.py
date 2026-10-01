@@ -121,6 +121,12 @@ class PrizeTests(StaffTestCase):
         self.assertContains(resp, 'No game with code')
 
 
+class StaffNoSponsorFooterTests(StaffTestCase):
+    def test_staff_pages_have_no_player_sponsor_footer(self):
+        for name in ('staff_lookup', 'staff_moderate', 'staff_hall'):
+            self.assertNotContains(self.client.get(reverse(f'game:{name}')), 'class="sponsor"', msg_prefix=name)
+
+
 class MmssTests(TestCase):
     def test_rounds_down_and_handles_none(self):
         from game.templatetags.game_text import mmss
