@@ -1,10 +1,10 @@
 ---
 change_id: branding
 title: Branding visual fixes from Claude Design handoff
-status: impl_reviewed
+status: archived
 created: 2026-10-01
 updated: 2026-10-01
-archived_at: null
+archived_at: 2026-10-01T10:51:09Z
 ---
 
 ## Notes
