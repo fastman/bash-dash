@@ -6,6 +6,7 @@ from unittest import mock
 import docker.errors
 import requests.exceptions
 
+from django.contrib.staticfiles import finders
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -16,7 +17,8 @@ from game.models import GameSession
 from game.templatetags.game_text import render_description
 from game.tests.fakes import result
 
-EXTERNAL_LINK = re.compile(r'<a\s[^>]*href\s*=\s*["\']?(https?:)?//', re.I)
+EXTERNAL_HREF = re.compile(r'<a\s[^>]*href\s*=\s*["\']?((?:https?:)?//[^"\'\s>]*)', re.I)
+ALLOWED_EXTERNAL = 'https://camlingroup.com/'
 
 
 class ViewTestCase(TestCase):
@@ -330,18 +332,35 @@ class CsrfTests(ViewTestCase):
 
 
 class NoAnswerLinksTests(ViewTestCase):
-    def test_pages_contain_no_external_links(self):
+    def player_pages(self):
         token = services.issue_start_token()
-        pages = [self.client.get(reverse('game:home')).content,
-                 self.client.get(reverse('game:home'), {'t': token}).content]
+        pages = {'gate': self.client.get(reverse('game:home')),
+                 'home': self.client.get(reverse('game:home'), {'t': token})}
         self.start()
-        pages.append(self.client.get(reverse('game:play')).content)
+        pages['play'] = self.client.get(reverse('game:play'))
         GameSession.objects.filter(pk=self.game().pk).update(current_slug=self.order[-1].slug)
         self.run_command.return_value = result(True)
         self.command('x')
-        pages.append(self.client.get(reverse('game:done')).content)
-        for html in pages:
-            self.assertIsNone(EXTERNAL_LINK.search(html.decode()), html[:200])
+        pages['done'] = self.client.get(reverse('game:done'))
+        return pages
+
+    def test_pages_contain_no_external_links_except_sponsor(self):
+        for name, resp in self.player_pages().items():
+            for href in EXTERNAL_HREF.findall(resp.content.decode()):
+                self.assertEqual(href, ALLOWED_EXTERNAL, name)
+
+    def test_guard_rejects_other_external_hosts(self):
+        html = '<a class="x" href="https://example.com/">x</a><a href="//evil.test/">y</a>'
+        self.assertEqual(EXTERNAL_HREF.findall(html), ['https://example.com/', '//evil.test/'])
+
+    def test_player_pages_carry_sponsor_footer(self):
+        for name, resp in self.player_pages().items():
+            for needle in ('class="sponsor"', 'href="https://camlingroup.com/"',
+                           'rel="noopener"', 'target="_blank"', 'alt="Camlin Group"'):
+                self.assertContains(resp, needle, status_code=resp.status_code, msg_prefix=name)
+
+    def test_logo_is_a_collected_static_file(self):
+        self.assertTrue(finders.find('game/camlin-logo.png'))
 
 
 class DescriptionFilterTests(TestCase):

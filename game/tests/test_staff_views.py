@@ -121,6 +121,12 @@ class PrizeTests(StaffTestCase):
         self.assertContains(resp, 'No game with code')
 
 
+class StaffNoSponsorFooterTests(StaffTestCase):
+    def test_staff_pages_have_no_player_sponsor_footer(self):
+        for name in ('staff_lookup', 'staff_moderate', 'staff_hall'):
+            self.assertNotContains(self.client.get(reverse(f'game:{name}')), 'class="sponsor"', msg_prefix=name)
+
+
 class MmssTests(TestCase):
     def test_rounds_down_and_handles_none(self):
         from game.templatetags.game_text import mmss
@@ -192,6 +198,16 @@ class HallTests(StaffTestCase):
         html = self.client.get(self.hall).content.decode()
         self.assertIn('No finished games yet', html)
         self.assertIn('Nobody has finished yet', html)
+
+    def test_hall_header_carries_large_camlin_logo_and_tagline(self):
+        html = self.client.get(self.hall).content.decode()
+        for needle in ('class="hall-sponsor"', 'href="https://camlingroup.com/"', 'alt="Camlin Group"',
+                       'rel="noopener"', 'class="hall-brand"', 'class="hall-tagline"'):
+            self.assertIn(needle, html)
+        self.assertLess(html.index('class="hall-brand"'), html.index('class="hall-sponsor"'))
+
+    def test_board_fragment_has_no_sponsor(self):
+        self.assertNotContains(self.client.get(self.board), 'hall-sponsor')
 
     def test_fragment_is_not_cached_and_has_no_page_chrome(self):
         resp = self.client.get(self.board)
