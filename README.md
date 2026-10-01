@@ -19,7 +19,10 @@ Adresy (port z `BASHDASH_PORT`, domyślnie 8000):
 
 - `/` — gra (start wymaga tokenu z QR albo 6-cyfrowego kodu spod QR),
 - `/staff/hall` — ekran rankingu z QR (otwórz go pod adresem z `BASHDASH_PUBLIC_URL`),
-- `/staff` — wyszukiwanie kodu nagrody, `/admin/` — panel.
+- `/staff` — wyszukiwanie kodu nagrody i link do konfiguracji gry,
+- `/staff/moderate` — moderacja rankingu i ustawienia: ważność kodu QR oraz bonus czasu za poprawną
+  odpowiedź (domyślnie 15 s; 0 wyłącza bonus),
+- `/admin/` — panel Django.
 
 Koledzy z sieci biurowej łączą się pod `http://<IP-hosta>:8000`; jeśli host ma firewall, otwórz ten port.
 

@@ -10,7 +10,7 @@ from django.utils import timezone
 from challenges import catalog, sandbox
 from challenges.tests.fakes import write_excluded
 from game import services
-from game.models import Attempt, GameSession, GateSettings
+from game.models import Attempt, GameSession, GameSettings, GateSettings
 from game.tests.fakes import result
 
 
@@ -233,18 +233,21 @@ class SubmitCommandTests(ServiceTestCase):
         self.game = services.start_game('neo')
 
     def test_incorrect_command_is_counted_and_stays(self):
+        deadline = self.fresh(self.game).deadline_at
         self.run_command.return_value = result(False, output='nope\n', error='Test failed')
         outcome = services.submit_command(self.game.id, 'ls')
         self.assertEqual(outcome.status, 'ran')
         self.assertFalse(outcome.result.correct)
         game = self.fresh(self.game)
         self.assertEqual((game.attempts, game.solved, game.current_slug), (1, 0, 'hello_world'))
+        self.assertEqual(game.deadline_at, deadline)
         attempt = Attempt.objects.get()
         self.assertEqual((attempt.slug, attempt.command, attempt.output, attempt.error),
                          ('hello_world', 'ls', 'nope\n', 'Test failed'))
         self.assertEqual(attempt.duration_ms, 120)
 
     def test_correct_command_counts_solves_and_advances(self):
+        deadline = self.fresh(self.game).deadline_at
         self.run_command.return_value = result(True, output='hello world\n')
         outcome = services.submit_command(self.game.id, 'echo hello world')
         self.assertEqual(outcome.status, 'ran')
@@ -252,12 +255,14 @@ class SubmitCommandTests(ServiceTestCase):
         self.assertEqual((game.attempts, game.solved), (1, 1))
         self.assertIsNotNone(game.last_solved_at)
         self.assertEqual(game.current_slug, self.order[1])
+        self.assertEqual(game.deadline_at, deadline + timedelta(seconds=15))
         self.assertEqual(outcome.game.current_slug, self.order[1])
         # the command reaches the sandbox verbatim, for the challenge it was on
         ch, cmd = self.run_command.call_args.args
         self.assertEqual((ch.slug, cmd), ('hello_world', 'echo hello world'))
 
     def test_solving_the_last_challenge_finishes_the_game(self):
+        deadline = self.fresh(self.game).deadline_at
         GameSession.objects.filter(pk=self.game.pk).update(current_slug=self.order[-1])
         self.run_command.return_value = result(True)
         services.submit_command(self.game.id, 'x')
@@ -266,6 +271,7 @@ class SubmitCommandTests(ServiceTestCase):
         self.assertIsNotNone(game.finished_at)
         self.assertTrue(game.is_finished)
         self.assertEqual(game.solved, 1)
+        self.assertEqual(game.deadline_at, deadline)
 
     def test_submit_on_finished_game_is_not_counted(self):
         GameSession.objects.filter(pk=self.game.pk).update(current_slug=self.order[-1])
@@ -340,10 +346,12 @@ class SubmitCommandTests(ServiceTestCase):
             return result(True)
 
         self.run_command.side_effect = run
+        deadline = self.fresh(self.game).deadline_at
         services.submit_command(self.game.id, 'echo hello world')
         self.assertEqual(calls, ['hello_world', 'hello_world'])
         game = self.fresh(self.game)
         self.assertEqual((game.attempts, game.solved, game.current_slug), (2, 1, self.order[1]))
+        self.assertEqual(game.deadline_at, deadline + timedelta(seconds=15))
 
     def test_run_that_overlaps_the_game_finishing_is_neither_stored_nor_counted(self):
         # Only an all-solved finish closes the game to in-flight runs: a timeout mid-run still counts
@@ -426,7 +434,7 @@ class TimeLimitTests(ServiceTestCase):
         self.assertEqual(services.submit_command(self.game.id, 'y').status, 'finished')
         self.run_command.assert_not_called()
 
-    def test_sent_before_recorded_after_is_counted_and_solve_advances(self):
+    def test_sent_before_recorded_after_is_counted_and_bonus_keeps_game_open(self):
         def run(challenge, command):
             past(self.game.pk)
             return result(True)
@@ -437,11 +445,11 @@ class TimeLimitTests(ServiceTestCase):
         game = self.fresh(self.game)
         self.assertEqual((game.attempts, game.solved, game.current_slug), (1, 1, self.order[1]))
         self.assertLessEqual(game.last_solved_at, game.deadline_at)
-        self.assertEqual(game.finished_at, game.deadline_at)
-        self.assertTrue(outcome.game.is_finished)
+        self.assertIsNone(game.finished_at)
+        self.assertFalse(outcome.game.is_finished)
         self.assertEqual(Attempt.objects.count(), 1)
 
-    def test_expired_by_another_request_mid_run_still_counts_and_stays_finished(self):
+    def test_correct_run_reopens_timeout_recorded_while_command_was_running(self):
         def run(challenge, command):
             past(self.game.pk)
             services.expire_overdue(self.game.pk)
@@ -452,7 +460,8 @@ class TimeLimitTests(ServiceTestCase):
         self.assertEqual(outcome.status, 'ran')
         game = self.fresh(self.game)
         self.assertEqual((game.attempts, game.solved), (1, 1))
-        self.assertEqual(game.finished_at, game.deadline_at)
+        self.assertIsNone(game.finished_at)
+        self.assertGreater(game.deadline_at, timezone.now())
 
     def test_grace_solve_of_last_challenge_is_stamped_at_deadline(self):
         GameSession.objects.filter(pk=self.game.pk).update(current_slug=self.order[-1])
@@ -569,6 +578,23 @@ class PrizeTests(ServiceTestCase):
         self.assertIsNone(services.solve_time(game))
         game.last_solved_at = game.started_at + timedelta(seconds=75)
         self.assertEqual(services.solve_time(game), timedelta(seconds=75))
+
+
+class GameSettingsTests(TestCase):
+    def test_default_correct_answer_bonus_is_15_seconds(self):
+        self.assertEqual(services.game_settings().correct_answer_bonus_s, 15)
+
+    def test_set_correct_answer_bonus(self):
+        for seconds in (0, 42, services.CORRECT_ANSWER_BONUS_MAX_S):
+            self.assertEqual(services.set_correct_answer_bonus(seconds).correct_answer_bonus_s, seconds)
+        self.assertEqual(GameSettings.objects.count(), 1)
+
+    def test_set_correct_answer_bonus_rejects_out_of_range_values(self):
+        before = services.game_settings().correct_answer_bonus_s
+        for seconds in (-1, services.CORRECT_ANSWER_BONUS_MAX_S + 1):
+            with self.assertRaises(ValueError):
+                services.set_correct_answer_bonus(seconds)
+        self.assertEqual(services.game_settings().correct_answer_bonus_s, before)
 
 
 class StartTokenTests(TestCase):

@@ -20,6 +20,15 @@
   </form>
   <p class="muted">0 = never expires</p>
 
+  <h2 class="rule"><span class="label cyan-text">Game timer</span></h2>
+  <form method="post" action="{% url 'game:staff_correct_answer_bonus' %}" class="mod-row">
+    {% csrf_token %}
+    <label for="seconds">Correct answer bonus (sec)</label>
+    <input id="seconds" name="seconds" type="number" min="0" max="{{ correct_answer_bonus_max_s }}" inputmode="numeric" required value="{{ correct_answer_bonus_s }}">
+    <button type="submit">Save</button>
+  </form>
+  <p class="muted">Added to the server timer after each solved challenge. 0 = disabled.</p>
+
   <h2 class="rule"><span class="label cyan-text">On screen: top {{ board.top|length }}</span></h2>
   {% for r in board.top %}
   <form method="post" action="{% url 'game:staff_hide' %}" class="mod-row">
