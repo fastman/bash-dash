@@ -3,8 +3,14 @@
 {% block title %}Hall of fame{% endblock %}
 {% block main_class %}hall{% endblock %}
 {% block header %}<header class="hall-header">
-  {% include 'game/_logo.html' %}
-  <p class="hall-tagline">{{ duration|duration_text }} · bash only · <span class="cursor" aria-hidden="true"></span></p>
+  <div class="hall-brand">
+    {% include 'game/_logo.html' %}
+    <p class="hall-tagline">{{ duration|duration_text }} · bash only · <span class="cursor" aria-hidden="true"></span></p>
+  </div>
+  <a class="hall-sponsor" href="https://camlingroup.com/" target="_blank" rel="noopener">
+    <img src="{% static 'game/camlin-logo.png' %}" alt="Camlin Group" width="264" height="88">
+    <span>camlingroup.com</span>
+  </a>
 </header>{% endblock %}
 {% block sponsor %}{% endblock %}
 {% block content %}

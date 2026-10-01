@@ -55,7 +55,7 @@ main:not(.hall) {
   min-height: 100vh;
   min-height: 100dvh;
 }
-.page { margin-bottom: 32px; }
+main:not(.hall) .page { margin-bottom: 32px; }
 .sponsor {
   margin-top: auto;
   padding-top: 16px;
@@ -314,9 +314,13 @@ button:disabled, input:disabled { opacity: 0.6; }
 .logout .link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 0; min-height: 44px; font-size: 14px; font-weight: normal; cursor: pointer; }
 
 /* Hall of fame big screen (S-05) */
-main.hall { max-width: 110rem; padding: 44px 56px; }
-.hall-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+main.hall { max-width: 110rem; padding: 32px 56px; }
+.hall-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
 .hall-header .logo { margin: 0; font-size: clamp(9px, 1.1vw, 17px); }
+.hall-brand { display: flex; flex-direction: column; gap: 14px; }
+.hall-sponsor { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; text-decoration: none; }
+.hall-sponsor img { height: 88px; width: auto; display: block; }
+.hall-sponsor span { font-size: 22px; color: var(--cyan); }
 .hall-tagline { margin: 0; color: var(--muted); font-size: 22px; white-space: nowrap; }
 .hall #board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); grid-template-rows: auto 1fr; column-gap: 64px; row-gap: 40px; align-items: start; }
 .hall .hall-top { grid-column: 1; grid-row: 1 / 3; }
@@ -326,7 +330,7 @@ main.hall { max-width: 110rem; padding: 44px 56px; }
 .hall .rule .badge { font-size: 24px; padding: 2px 12px; text-transform: uppercase; }
 .hall .hall-recent .rule .badge { font-size: 20px; }
 .hall .hall-rows { list-style: none; margin: 0; padding: 0; }
-.hall .hall-row { display: flex; gap: 16px; align-items: baseline; font-size: 30px; padding: 7px 8px;
+.hall .hall-row { display: flex; gap: 16px; align-items: baseline; font-size: 30px; padding: 5px 8px;
   border-bottom: 1px solid var(--border-soft); }
 .hall .hall-row .nick { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hall .hall-row .place { color: var(--lime); min-width: 76px; }
@@ -356,6 +360,8 @@ main.hall { max-width: 110rem; padding: 44px 56px; }
   main.hall { padding: 18px; }
   .hall-header { flex-direction: column; align-items: flex-start; }
   .hall-tagline { font-size: 16px; }
+  .hall-sponsor { align-items: flex-start; }
+  .hall-sponsor img { height: 48px; }
   .hall #board { grid-template-columns: 1fr; grid-template-rows: none; }
   .hall .hall-top, .hall .hall-qr, .hall .hall-recent { grid-column: 1; grid-row: auto; }
   .hall .hall-qr { flex-direction: column; text-align: center; }

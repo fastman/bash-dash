@@ -153,6 +153,8 @@ Restructure the hall header so the large Camlin logo and URL sit top-right, with
 
 **File**: `game/static/game/game.css`
 
+**Note**: `.page { margin-bottom: 32px }` from Phase 1 is scoped to `main:not(.hall) .page`, so the hall's measured height is unaffected.
+
 **Intent**: Apply the handoff's hall header CSS and the measured spacing reductions that keep 1600×900 scroll-free.
 
 **Contract**:
@@ -230,26 +232,26 @@ None. No data or schema changes. Static file is picked up by `collectstatic` at 
 
 #### Automated
 
-- [x] 1.1 Full test suite passes: `uv run python manage.py test`
-- [x] 1.2 Django check passes: `uv run python manage.py check`
-- [x] 1.3 Logo is collected: `uv run python manage.py findstatic game/camlin-logo.png`
-- [x] 1.4 Narrowed guard still bites: temporary `https://example.com/` link makes `NoAnswerLinksTests` fail
+- [x] 1.1 Full test suite passes: `uv run python manage.py test` — ab08e25
+- [x] 1.2 Django check passes: `uv run python manage.py check` — ab08e25
+- [x] 1.3 Logo is collected: `uv run python manage.py findstatic game/camlin-logo.png` — ab08e25
+- [x] 1.4 Narrowed guard still bites: temporary `https://example.com/` link makes `NoAnswerLinksTests` fail — ab08e25
 
 #### Manual
 
 - [ ] 1.5 Footer at bottom on gate/home/play/done at 390px, matches mockup screens 01–05
-- [x] 1.6 Existing spacing on gate/home/done unchanged (headless Chrome 390px, before/after element offsets identical on gate/home/play)
+- [x] 1.6 Existing spacing on gate/home/done unchanged (headless Chrome 390px, before/after element offsets identical on gate/home/play) — ab08e25
 - [ ] 1.7 Footer below output on a long play page
 - [ ] 1.8 Link opens camlingroup.com in a new tab; game tab keeps running
-- [x] 1.9 No footer on prize desk and moderation (covered by StaffNoSponsorFooterTests)
+- [x] 1.9 No footer on prize desk and moderation (covered by StaffNoSponsorFooterTests) — ab08e25
 
 ### Phase 2: Hall Header Branding
 
 #### Automated
 
-- [ ] 2.1 Full test suite passes: `uv run python manage.py test`
-- [ ] 2.2 Django check passes: `uv run python manage.py check`
-- [ ] 2.3 Hall content height at 1600×900 with 10 top + 5 recent rows ≤ 900px
+- [x] 2.1 Full test suite passes: `uv run python manage.py test`
+- [x] 2.2 Django check passes: `uv run python manage.py check`
+- [x] 2.3 Hall content height at 1600×900 with 10 top + 5 recent rows ≤ 900px (measured 874px, headless Chrome)
 
 #### Manual
 
