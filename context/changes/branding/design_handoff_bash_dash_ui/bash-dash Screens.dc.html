@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body { margin: 0; background: #e6e4df; }
+a { color: oklch(0.8 0.15 210); text-decoration: underline; text-underline-offset: 3px; }
+a:hover { color: oklch(0.8 0.15 350); }
+@keyframes bdBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes bdPop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes bdGlow { 0% { box-shadow: 0 0 0 0 oklch(0.8 0.15 135 / 0.7); } 100% { box-shadow: 0 0 0 14px oklch(0.8 0.15 135 / 0); } }
+</style>
+</helmet>
+<section style="padding: 56px; display: flex; flex-direction: column; gap: 64px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;">
+  <div style="display: flex; flex-direction: column; gap: 6px; color: #2a2833;">
+    <div style="font-size: 22px; font-weight: 700;">bash-dash · redesign</div>
+    <div style="font-size: 14px; color: #5b5866; max-width: 70ch; text-wrap: pretty;">Ciemny terminal, cztery akcenty (róż, cyjan, limonka, żółty). Ekran gry jest klikalny: wpisz komendę z sed / awk / head, żeby zobaczyć efekt poprawnej odpowiedzi.</div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-size: 13px; color: #3a3845;">01 · Gra (play) — interaktywna</div>
+      <div data-screen-label="01 Play" style="width: 390px; min-height: 844px; box-sizing: border-box; background: #0f0e14; color: #ecebf2; border-radius: 28px; padding: 20px 18px 32px; font-size: 15px; line-height: 1.5; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 24px 60px rgba(20,18,30,0.25);">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700;">
+            <span style="color: oklch(0.8 0.15 350);">$</span>
+            <span style="background: linear-gradient(90deg, oklch(0.8 0.15 350), oklch(0.8 0.15 95), oklch(0.8 0.15 135), oklch(0.8 0.15 210)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">bash-dash</span>
+          </div>
+          <span style="background: oklch(0.8 0.15 350); color: #0f0e14; font-weight: 700; font-size: 13px; padding: 1px 8px; border-radius: 4px;">{{ chIndex }} / 38</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+          <div style="border: 1px solid #2a2735; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column;">
+            <span style="font-size: 11px; letter-spacing: 0.08em; color: #908ba3;">ATTEMPTS</span>
+            <strong style="font-size: 20px; color: oklch(0.8 0.15 210);">{{ attempts }}</strong>
+          </div>
+          <div style="border: 1px solid {{ solvedBorder }}; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; transition: border-color 0.3s;">
+            <span style="font-size: 11px; letter-spacing: 0.08em; color: #908ba3;">SOLVED</span>
+            <strong style="font-size: 20px; color: oklch(0.8 0.15 135);">{{ solved }}</strong>
+          </div>
+          <div style="border: 1px solid {{ timerBorder }}; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column;">
+            <span style="font-size: 11px; letter-spacing: 0.08em; color: #908ba3;">TIME</span>
+            <strong style="font-size: 20px; color: {{ timerColor }};">{{ clock }}</strong>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 4px;">
+          <h1 style="font-size: 21px; line-height: 1.3; margin: 0; font-weight: 700; text-wrap: pretty;">{{ chTitle }}</h1>
+          <div style="color: #cfccd9; overflow-wrap: anywhere; text-wrap: pretty;">{{ chPre }}<code style="color: oklch(0.8 0.15 210); background: #1d1a27; border-radius: 4px; padding: 1px 5px; font-size: 0.92em;">{{ chCode }}</code>{{ chPost }}</div>
+        </div>
+        <form onSubmit="{{ onSubmit }}" style="display: flex; align-items: stretch; gap: 8px; margin: 4px 0 0;">
+          <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; border: 1.5px solid {{ cmdBorder }}; border-radius: 10px; padding: 0 12px; background: #16141d; transition: border-color 0.3s; position: relative;">
+            <span style="color: oklch(0.8 0.15 350); font-weight: 700;">$</span>
+            <div style="position: relative; flex: 1; min-width: 0; display: flex; align-items: center;">
+              <input value="{{ cmd }}" onChange="{{ onCmd }}" disabled="{{ running }}" aria-label="Command" autocomplete="off" spellcheck="false" style="width: 100%; min-width: 0; background: transparent; border: 0; outline: none; color: #ecebf2; font: inherit; font-size: 16px; padding: 12px 0; caret-color: oklch(0.8 0.15 350);">
+              <sc-if value="{{ showCursor }}" hint-placeholder-val="{{ true }}">
+                <span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); pointer-events: none;">{{ cursor }}</span>
+              </sc-if>
+            </div>
+          </div>
+          <button type="submit" disabled="{{ running }}" style="min-height: 48px; border: 0; border-radius: 10px; padding: 0 16px; background: oklch(0.8 0.15 350); color: #0f0e14; font: inherit; font-weight: 700; font-size: 16px; cursor: pointer;">Run</button>
+        </form>
+        <div style="min-height: 28px; display: flex; align-items: center;">{{ verdict }}</div>
+        <div style="border: 1px solid #2a2735; border-radius: 10px; overflow: hidden; background: #16141d;">
+          <div style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid #2a2735; font-size: 13px; color: #908ba3; overflow-wrap: anywhere;">
+            <span style="color: oklch(0.8 0.15 350);">$</span><span>{{ lastCmd }}</span>
+          </div>
+          <pre style="margin: 0; padding: 12px; min-height: 96px; max-height: 320px; overflow: auto; font: inherit; font-size: 13.5px; color: #ecebf2; white-space: pre;">{{ output }}</pre>
+        </div>
+        <a href="https://camlingroup.com/" target="_blank" rel="noopener" style="margin-top: auto; padding-top: 16px; border-top: 1px solid #221f2c; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 13px; text-decoration: none;"><img src="assets/camlin-logo.png" alt="Camlin Group" style="height: 22px; width: auto; display: block;"><span style="color: oklch(0.8 0.15 210); text-decoration: underline; text-underline-offset: 3px;">camlingroup.com</span></a>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-size: 13px; color: #3a3845;">02 · Hall of fame — ekran przy stoisku (1600×900)</div>
+      <div data-screen-label="02 Hall of fame" style="width: 1600px; height: 900px; box-sizing: border-box; background: #0f0e14; color: #ecebf2; border-radius: 16px; padding: 44px 56px; display: flex; flex-direction: column; gap: 36px; box-shadow: 0 24px 60px rgba(20,18,30,0.25); overflow: hidden;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+          <pre style="margin: 0; font: inherit; font-size: 17px; line-height: 1.12; font-weight: 700; background: linear-gradient(90deg, oklch(0.8 0.15 350), oklch(0.8 0.15 95), oklch(0.8 0.15 135), oklch(0.8 0.15 210)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">___.                 .__          .___             .__     
+\_ |__ _____    _____|  |__     __| _/____    _____|  |__  
+ | __ \\__  \  /  ___/  |  \   / __ |\__  \  /  ___/  |  \ 
+ | \_\ \/ __ \_\___ \|   Y  \ / /_/ | / __ \_\___ \|   Y  \
+ |___  (____  /____  &gt;___|  / \____ |(____  /____  &gt;___|  /
+     \/     \/     \/     \/       \/     \/     \/     \/ </pre>
+          <div style="font-size: 22px; color: #908ba3; display: flex; align-items: center; gap: 10px;">5 minutes · bash only · {{ cursor }}</div>
+          </div>
+          <a href="https://camlingroup.com/" target="_blank" rel="noopener" style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px; text-decoration: none;"><img src="assets/camlin-logo.png" alt="Camlin Group" style="height: 88px; width: auto; display: block;"><span style="font-size: 22px; color: oklch(0.8 0.15 210);">camlingroup.com</span></a>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 560px; gap: 64px; align-items: start; flex: 1; min-height: 0;">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <span style="background: oklch(0.8 0.15 350); color: #0f0e14; font-weight: 700; font-size: 24px; padding: 2px 12px; border-radius: 6px;">HALL OF FAME</span>
+              <span style="flex: 1; border-top: 1px solid #2a2735;"></span>
+            </div>
+            <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;">
+              <li style="display: flex; gap: 20px; align-items: baseline; font-size: 30px; padding: 7px 8px; border-bottom: 1px solid #2a2735; font-weight: 700;">
+                <span style="min-width: 76px;"><span style="background: oklch(0.8 0.15 95); color: #0f0e14; padding: 0 8px; border-radius: 4px;">#1</span></span>
+                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: oklch(0.8 0.15 95);">grepmaster</span>
+                <span style="color: #ecebf2;">24 / 38</span><span style="color: #908ba3; min-width: 150px; text-align: right;">31 att.</span>
+              </li>
+              <li style="display: flex; gap: 20px; align-items: baseline; font-size: 30px; padding: 7px 8px; border-bottom: 1px solid #2a2735; font-weight: 700;">
+                <span style="min-width: 76px;"><span style="background: oklch(0.8 0.15 210); color: #0f0e14; padding: 0 8px; border-radius: 4px;">#2</span></span>
+                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: oklch(0.8 0.15 210);">r00t</span>
+                <span style="color: #ecebf2;">22 / 38</span><span style="color: #908ba3; min-width: 150px; text-align: right;">25 att.</span>
+              </li>
+              <li style="display: flex; gap: 20px; align-items: baseline; font-size: 30px; padding: 7px 8px; border-bottom: 1px solid #2a2735; font-weight: 700;">
+                <span style="min-width: 76px;"><span style="background: oklch(0.8 0.15 350); color: #0f0e14; padding: 0 8px; border-radius: 4px;">#3</span></span>
+                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: oklch(0.8 0.15 350);">awk_ward</span>
+                <span style="color: #ecebf2;">22 / 38</span><span style="color: #908ba3; min-width: 150px; text-align: right;">29 att.</span>
+              </li>
+              <sc-for list="{{ hallRest }}" as="r" hint-placeholder-count="7">
+                <li style="display: flex; gap: 20px; align-items: baseline; font-size: 30px; padding: 7px 8px; border-bottom: 1px solid #2a2735;">
+                  <span style="min-width: 76px; color: oklch(0.8 0.15 135); padding-left: 8px;">#{{ r.place }}</span>
+                  <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.nick }}</span>
+                  <span style="color: #cfccd9;">{{ r.solved }} / 38</span><span style="color: #908ba3; min-width: 150px; text-align: right;">{{ r.att }} att.</span>
+                </li>
+              </sc-for>
+            </ol>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 40px;">
+          <div style="display: flex; align-items: center; gap: 32px; border: 1px solid #2a2735; border-radius: 18px; padding: 24px; background: #16141d;">
+            <div style="width: 236px; height: 236px; flex: none; box-sizing: border-box; background: #fff; border-radius: 14px; padding: 12px; box-shadow: 0 0 0 3px oklch(0.8 0.15 350), 0 0 40px oklch(0.8 0.15 350 / 0.35);">
+              <div style="width: 100%; height: 100%; background: repeating-linear-gradient(45deg, #eeeef2 0 10px, #e2e1e8 10px 20px); display: flex; align-items: center; justify-content: center; color: #6b6878; font-size: 16px;">qr_svg</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="font-size: 32px; font-weight: 700;">Scan to play</div>
+              <div style="font-size: 46px; font-weight: 700; letter-spacing: 0.12em; color: oklch(0.8 0.15 95); white-space: nowrap;">482 913</div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <span style="background: oklch(0.8 0.15 135); color: #0f0e14; font-weight: 700; font-size: 24px; padding: 2px 12px; border-radius: 6px;">JUST FINISHED</span>
+              <span style="flex: 1; border-top: 1px solid #2a2735;"></span>
+            </div>
+            <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;">
+              <sc-for list="{{ hallRecent }}" as="r" hint-placeholder-count="6">
+                <li style="display: flex; gap: 16px; align-items: baseline; font-size: 26px; padding: 8px 8px; border-bottom: 1px solid #2a2735;">
+                  <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.nick }}</span>
+                  <span style="color: #cfccd9;">{{ r.solved }}/38</span><span style="color: #908ba3;">{{ r.att }} att.</span>
+                  <span style="color: oklch(0.8 0.15 135); min-width: 64px; text-align: right;">#{{ r.place }}</span>
+                </li>
+              </sc-for>
+            </ol>
+          </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-size: 13px; color: #3a3845;">03 · Gate (bez / z wygasłym kodem)</div>
+      <div data-screen-label="03 Gate" style="width: 390px; min-height: 844px; box-sizing: border-box; background: #0f0e14; color: #ecebf2; border-radius: 28px; padding: 40px 20px 32px; font-size: 15px; line-height: 1.5; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 24px 60px rgba(20,18,30,0.25);">
+        <pre style="margin: 0; font: inherit; font-size: 9.4px; line-height: 1.15; font-weight: 700; background: linear-gradient(90deg, oklch(0.8 0.15 350), oklch(0.8 0.15 95), oklch(0.8 0.15 135), oklch(0.8 0.15 210)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">___.                 .__          .___             .__     
+\_ |__ _____    _____|  |__     __| _/____    _____|  |__  
+ | __ \\__  \  /  ___/  |  \   / __ |\__  \  /  ___/  |  \ 
+ | \_\ \/ __ \_\___ \|   Y  \ / /_/ | / __ \_\___ \|   Y  \
+ |___  (____  /____  &gt;___|  / \____ |(____  /____  &gt;___|  /
+     \/     \/     \/     \/       \/     \/     \/     \/ </pre>
+        <h1 style="font-size: 21px; line-height: 1.3; margin: 12px 0 0; font-weight: 700; text-wrap: pretty;">Scan the QR code at the booth to play</h1>
+        <div style="border: 1px solid oklch(0.68 0.19 25); color: oklch(0.72 0.17 25); border-radius: 10px; padding: 10px 12px;">✗ That code has expired.</div>
+        <p style="margin: 0; color: #cfccd9; text-wrap: pretty;">Can't scan? Enter the 6-digit code shown under the QR code.</p>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="font-size: 12px; letter-spacing: 0.08em; color: #908ba3;">CODE</label>
+          <div style="display: flex; align-items: center; gap: 10px; border: 1.5px solid oklch(0.8 0.15 350); border-radius: 10px; padding: 12px; background: #16141d; font-size: 22px; letter-spacing: 0.15em;"><span>482 9</span>{{ cursor }}</div>
+          <button style="min-height: 48px; border: 0; border-radius: 10px; background: oklch(0.8 0.15 350); color: #0f0e14; font: inherit; font-weight: 700; font-size: 16px; margin-top: 4px;">Continue</button>
+        </div>
+        <a href="https://camlingroup.com/" target="_blank" rel="noopener" style="margin-top: auto; padding-top: 16px; border-top: 1px solid #221f2c; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 13px; text-decoration: none;"><img src="assets/camlin-logo.png" alt="Camlin Group" style="height: 22px; width: auto; display: block;"><span style="color: oklch(0.8 0.15 210); text-decoration: underline; text-underline-offset: 3px;">camlingroup.com</span></a>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-size: 13px; color: #3a3845;">04 · Start — zasady + nick</div>
+      <div data-screen-label="04 Home" style="width: 390px; min-height: 844px; box-sizing: border-box; background: #0f0e14; color: #ecebf2; border-radius: 28px; padding: 40px 20px 32px; font-size: 15px; line-height: 1.5; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 24px 60px rgba(20,18,30,0.25);">
+        <pre style="margin: 0; font: inherit; font-size: 9.4px; line-height: 1.15; font-weight: 700; background: linear-gradient(90deg, oklch(0.8 0.15 350), oklch(0.8 0.15 95), oklch(0.8 0.15 135), oklch(0.8 0.15 210)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">___.                 .__          .___             .__     
+\_ |__ _____    _____|  |__     __| _/____    _____|  |__  
+ | __ \\__  \  /  ___/  |  \   / __ |\__  \  /  ___/  |  \ 
+ | \_\ \/ __ \_\___ \|   Y  \ / /_/ | / __ \_\___ \|   Y  \
+ |___  (____  /____  &gt;___|  / \____ |(____  /____  &gt;___|  /
+     \/     \/     \/     \/       \/     \/     \/     \/ </pre>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
+          <span style="background: oklch(0.8 0.15 210); color: #0f0e14; font-weight: 700; padding: 1px 8px; border-radius: 4px;">How to play</span>
+          <span style="flex: 1; border-top: 1px solid #2a2735;"></span>
+        </div>
+        <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; color: #cfccd9;">
+          <li style="display: flex; gap: 10px;"><span style="color: oklch(0.8 0.15 350);">›</span><span style="text-wrap: pretty;">Solve bash challenges in order, one at a time. You can't skip a challenge.</span></li>
+          <li style="display: flex; gap: 10px;"><span style="color: oklch(0.8 0.15 350);">›</span><span style="text-wrap: pretty;">Type a bash command. It runs in a sandbox and you see its output and whether it solved the challenge.</span></li>
+          <li style="display: flex; gap: 10px;"><span style="color: oklch(0.8 0.15 350);">›</span><span style="text-wrap: pretty;">Every command you run counts as an attempt, including <code style="color: oklch(0.8 0.15 210); background: #1d1a27; border-radius: 4px; padding: 1px 5px;">ls</code> and <code style="color: oklch(0.8 0.15 210); background: #1d1a27; border-radius: 4px; padding: 1px 5px;">cat</code>.</span></li>
+          <li style="display: flex; gap: 10px;"><span style="color: oklch(0.8 0.15 350);">›</span><span>Fewer attempts is better.</span></li>
+          <li style="display: flex; gap: 10px;"><span style="color: oklch(0.8 0.15 350);">›</span><span>You have <strong style="color: oklch(0.8 0.15 95);">5 minutes</strong>.</span></li>
+        </ul>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+          <label style="font-size: 12px; letter-spacing: 0.08em; color: #908ba3;">YOUR NICK</label>
+          <div style="display: flex; align-items: center; gap: 2px; border: 1.5px solid oklch(0.8 0.15 350); border-radius: 10px; padding: 12px; background: #16141d; font-size: 16px;"><span>grepmaster</span>{{ cursor }}</div>
+          <button style="min-height: 52px; border: 0; border-radius: 10px; background: oklch(0.8 0.15 350); color: #0f0e14; font: inherit; font-weight: 700; font-size: 17px; margin-top: 4px;">Start ▸</button>
+        </div>
+        <a href="https://camlingroup.com/" target="_blank" rel="noopener" style="margin-top: auto; padding-top: 16px; border-top: 1px solid #221f2c; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 13px; text-decoration: none;"><img src="assets/camlin-logo.png" alt="Camlin Group" style="height: 22px; width: auto; display: block;"><span style="color: oklch(0.8 0.15 210); text-decoration: underline; text-underline-offset: 3px;">camlingroup.com</span></a>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-size: 13px; color: #3a3845;">05 · Podsumowanie + kod nagrody</div>
+      <div data-screen-label="05 Done" style="width: 390px; min-height: 844px; box-sizing: border-box; background: #0f0e14; color: #ecebf2; border-radius: 28px; padding: 40px 20px 32px; font-size: 15px; line-height: 1.5; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 24px 60px rgba(20,18,30,0.25);">
+        <pre style="margin: 0; font: inherit; font-size: 9.4px; line-height: 1.15; font-weight: 700; background: linear-gradient(90deg, oklch(0.8 0.15 350), oklch(0.8 0.15 95), oklch(0.8 0.15 135), oklch(0.8 0.15 210)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">___.                 .__          .___             .__     
+\_ |__ _____    _____|  |__     __| _/____    _____|  |__  
+ | __ \\__  \  /  ___/  |  \   / __ |\__  \  /  ___/  |  \ 
+ | \_\ \/ __ \_\___ \|   Y  \ / /_/ | / __ \_\___ \|   Y  \
+ |___  (____  /____  &gt;___|  / \____ |(____  /____  &gt;___|  /
+     \/     \/     \/     \/       \/     \/     \/     \/ </pre>
+        <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 12px;">
+          <h1 style="font-size: 24px; line-height: 1.3; margin: 0; font-weight: 700; color: oklch(0.8 0.15 95);">Time's up!</h1>
+          <p style="margin: 0; color: #cfccd9;">Well played, <strong style="color: #ecebf2;">grepmaster</strong>.</p>
+        </div>
+        <div style="border: 1px solid #2a2735; border-radius: 10px; padding: 6px 14px; display: flex; flex-direction: column;">
+          <div style="display: flex; gap: 8px; align-items: baseline; padding: 6px 0;"><span style="color: #908ba3;">Solved</span><span style="flex: 1; border-bottom: 1px dotted #3a3649;"></span><strong style="color: oklch(0.8 0.15 135);">14 / 38</strong></div>
+          <div style="display: flex; gap: 8px; align-items: baseline; padding: 6px 0;"><span style="color: #908ba3;">Attempts</span><span style="flex: 1; border-bottom: 1px dotted #3a3649;"></span><strong style="color: oklch(0.8 0.15 210);">23</strong></div>
+          <div style="display: flex; gap: 8px; align-items: baseline; padding: 6px 0;"><span style="color: #908ba3;">Place</span><span style="flex: 1; border-bottom: 1px dotted #3a3649;"></span><strong style="color: oklch(0.8 0.15 350);">#3 of 57</strong></div>
+        </div>
+        <div style="border: 1.5px dashed oklch(0.8 0.15 95); border-radius: 14px; padding: 20px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;">
+          <span style="font-size: 12px; letter-spacing: 0.08em; color: #908ba3;">PRIZE CODE</span>
+          <p style="margin: 0; font-size: 50px; line-height: 1.1; font-weight: 700; letter-spacing: 0.12em; color: oklch(0.8 0.15 95); user-select: all;">731406</p>
+          <p style="margin: 4px 0 0; color: #ecebf2; text-wrap: pretty;">Show this code at the booth to claim your prize.</p>
+          <p style="margin: 0; color: #cfccd9; text-wrap: pretty;">Take a screenshot so you don't lose it.</p>
+        </div>
+        <p style="margin: 0; color: #908ba3; font-size: 13px;">Your place can change as other players finish.</p>
+        <a href="https://camlingroup.com/" target="_blank" rel="noopener" style="margin-top: auto; padding-top: 16px; border-top: 1px solid #221f2c; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 13px; text-decoration: none;"><img src="assets/camlin-logo.png" alt="Camlin Group" style="height: 22px; width: auto; display: block;"><span style="color: oklch(0.8 0.15 210); text-decoration: underline; text-underline-offset: 3px;">camlingroup.com</span></a>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 48px; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-size: 13px; color: #3a3845;">06 · Prize desk (obsługa)</div>
+      <div data-screen-label="06 Prize desk" style="width: 390px; min-height: 844px; box-sizing: border-box; background: #0f0e14; color: #ecebf2; border-radius: 28px; padding: 20px 18px 32px; font-size: 15px; line-height: 1.5; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 24px 60px rgba(20,18,30,0.25);">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700;">
+            <span style="color: oklch(0.8 0.15 350);">$</span>
+            <span style="background: linear-gradient(90deg, oklch(0.8 0.15 350), oklch(0.8 0.15 95), oklch(0.8 0.15 135), oklch(0.8 0.15 210)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">bash-dash</span>
+          </div>
+          <span style="background: oklch(0.8 0.15 95); color: #0f0e14; font-weight: 700; font-size: 13px; padding: 1px 8px; border-radius: 4px;">STAFF</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <h1 style="font-size: 22px; margin: 0; font-weight: 700;">Prize desk</h1>
+          <div style="display: flex; gap: 8px; font-size: 13px; color: #908ba3;"><a href="#">Hall of fame screen</a><span>·</span><a href="#">Moderation</a></div>
+        </div>
+        <div style="border: 1px solid oklch(0.8 0.15 135); color: oklch(0.8 0.15 135); border-radius: 10px; padding: 10px 12px;">✓ Prize marked as given.</div>
+        <div style="display: flex; gap: 8px;">
+          <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; border: 1.5px solid oklch(0.8 0.15 350); border-radius: 10px; padding: 10px 12px; background: #16141d; font-size: 24px; letter-spacing: 0.15em;"><span>731406</span>{{ cursor }}</div>
+          <button style="min-height: 52px; border: 0; border-radius: 10px; padding: 0 16px; background: oklch(0.8 0.15 350); color: #0f0e14; font: inherit; font-weight: 700; font-size: 15px;">Look up</button>
+        </div>
+        <div style="border: 1px solid #2a2735; border-radius: 12px; padding: 16px; background: #16141d; display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <p style="font-size: 30px; font-weight: 700; margin: 0; color: oklch(0.8 0.15 95); overflow-wrap: anywhere;">grepmaster</p>
+            <p style="margin: 0; font-size: 13px; color: #908ba3;">Ask the player for their nick</p>
+          </div>
+          <div style="display: flex; flex-direction: column;">
+            <div style="display: flex; gap: 8px; align-items: baseline; padding: 4px 0;"><span style="color: #908ba3;">Solved</span><span style="flex: 1; border-bottom: 1px dotted #3a3649;"></span><strong>14 / 38</strong></div>
+            <div style="display: flex; gap: 8px; align-items: baseline; padding: 4px 0;"><span style="color: #908ba3;">Attempts</span><span style="flex: 1; border-bottom: 1px dotted #3a3649;"></span><strong>23</strong></div>
+            <div style="display: flex; gap: 8px; align-items: baseline; padding: 4px 0;"><span style="color: #908ba3;">Place</span><span style="flex: 1; border-bottom: 1px dotted #3a3649;"></span><strong>#3 of 57</strong></div>
+            <div style="display: flex; gap: 8px; align-items: baseline; padding: 4px 0;"><span style="color: #908ba3;">Solve time</span><span style="flex: 1; border-bottom: 1px dotted #3a3649;"></span><strong>4:52</strong></div>
+          </div>
+          <p style="margin: 0; font-size: 13px; color: #908ba3;">Finished 12 minutes ago</p>
+          <button style="min-height: 56px; border: 0; border-radius: 10px; background: oklch(0.8 0.15 135); color: #0f0e14; font: inherit; font-weight: 700; font-size: 18px;">Mark prize given</button>
+        </div>
+        <div style="border: 1px solid oklch(0.8 0.15 95); color: oklch(0.8 0.15 95); border-radius: 10px; padding: 10px 12px; font-size: 14px;">! Prize already given 3 minutes ago (14:32)</div>
+        <button style="align-self: flex-start; background: none; border: 0; padding: 0; color: #908ba3; font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer;">Log out</button>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-size: 13px; color: #3a3845;">07 · Moderacja</div>
+      <div data-screen-label="07 Moderation" style="width: 390px; min-height: 844px; box-sizing: border-box; background: #0f0e14; color: #ecebf2; border-radius: 28px; padding: 20px 18px 32px; font-size: 15px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 24px 60px rgba(20,18,30,0.25);">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700;">
+            <span style="color: oklch(0.8 0.15 350);">$</span>
+            <span style="background: linear-gradient(90deg, oklch(0.8 0.15 350), oklch(0.8 0.15 95), oklch(0.8 0.15 135), oklch(0.8 0.15 210)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">bash-dash</span>
+          </div>
+          <span style="background: oklch(0.8 0.15 95); color: #0f0e14; font-weight: 700; font-size: 13px; padding: 1px 8px; border-radius: 4px;">STAFF</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <h1 style="font-size: 22px; margin: 0; font-weight: 700;">Hall of fame moderation</h1>
+          <div style="display: flex; gap: 8px; font-size: 13px; color: #908ba3;"><a href="#">Hall of fame screen</a><span>·</span><a href="#">Prize desk</a></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+          <span style="color: oklch(0.8 0.15 210); font-weight: 700;">Start QR</span><span style="flex: 1; border-top: 1px solid #2a2735;"></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="flex: 1; color: #cfccd9;">Lifetime (min)</label>
+          <div style="width: 72px; border: 1px solid #2a2735; border-radius: 8px; padding: 9px 10px; background: #16141d; text-align: right;">15</div>
+          <button style="min-height: 44px; border: 0; border-radius: 8px; padding: 0 14px; background: oklch(0.8 0.15 350); color: #0f0e14; font: inherit; font-weight: 700;">Save</button>
+        </div>
+        <p style="margin: -6px 0 0; font-size: 13px; color: #908ba3;">0 = never expires</p>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+          <span style="color: oklch(0.8 0.15 210); font-weight: 700;">On screen: top 10</span><span style="flex: 1; border-top: 1px solid #2a2735;"></span>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <sc-for list="{{ modTop }}" as="r" hint-placeholder-count="4">
+            <div style="display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #221f2c;">
+              <span style="color: oklch(0.8 0.15 135); min-width: 30px;">#{{ r.place }}</span>
+              <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.nick }}</span>
+              <span style="font-size: 12px; color: #908ba3; white-space: nowrap;">{{ r.solved }}/38 · {{ r.att }} att.</span>
+              <button style="min-height: 44px; padding: 0 12px; border: 1px solid oklch(0.68 0.19 25); border-radius: 8px; background: transparent; color: oklch(0.72 0.17 25); font: inherit; font-weight: 700;">Hide</button>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+          <span style="color: oklch(0.8 0.15 210); font-weight: 700;">Hidden</span><span style="flex: 1; border-top: 1px solid #2a2735;"></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 5px 0;">
+          <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #908ba3; text-decoration: line-through;">xX_h4x0r_Xx</span>
+          <span style="font-size: 12px; color: #908ba3; white-space: nowrap;">38/38 · 38 att. · 9 min ago</span>
+          <button style="min-height: 44px; padding: 0 12px; border: 1px solid #2a2735; border-radius: 8px; background: transparent; color: #ecebf2; font: inherit;">Unhide</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;timeLow&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Gra&quot;}, &quot;blink&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Gra&quot;}}">
+const CH = [
+  { index: 7, title: 'Print the 25th line', pre: 'Print the 25th line of ', code: 'faces.txt', post: '.', ok: /sed|awk|head|tail/, out: '(ಠ_ಠ)' },
+  { index: 8, title: 'Remove duplicate lines', pre: 'Print ', code: 'faces.txt', post: ' with duplicate lines removed, keeping the original order.', ok: /awk|sort|uniq/, out: '(ಠ_ಠ)\n¯\\_(ツ)_/¯\n(╯°□°)╯︵ ┻━┻\nʕ•ᴥ•ʔ' },
+];
+const P = 'oklch(0.8 0.15 350)', L = 'oklch(0.8 0.15 135)', Y = 'oklch(0.8 0.15 95)', R = 'oklch(0.72 0.17 25)', BORDER = '#2a2735';
+
+class Component extends DCLogic {
+  state = { ch: 0, cmd: '', phase: 'bad', attempts: 11, solved: 6, lastCmd: 'ls', output: 'faces.txt', flash: false, left: 221 };
+
+  componentDidMount() {
+    if (this.props.timeLow) this.setState({ left: 24 });
+    this.iv = setInterval(() => this.setState(s => ({ left: s.left <= 0 ? 221 : s.left - 1 })), 1000);
+  }
+  componentDidUpdate(prev) { if (prev.timeLow !== this.props.timeLow) this.setState({ left: this.props.timeLow ? 24 : 221 }); }
+  componentWillUnmount() { clearInterval(this.iv); clearTimeout(this.t1); clearTimeout(this.t2); }
+
+  submit = (e) => {
+    e.preventDefault();
+    const cmd = this.state.cmd.trim();
+    if (!cmd || this.state.phase === 'running') return;
+    this.setState({ phase: 'running' });
+    this.t1 = setTimeout(() => {
+      const ch = CH[this.state.ch];
+      const ok = ch.ok.test(cmd);
+      this.setState(s => ({
+        attempts: s.attempts + 1, lastCmd: cmd,
+        output: ok ? ch.out : (/^ls/.test(cmd) ? 'faces.txt' : (/^cat/.test(cmd) ? CH[1].out + '\n(ಠ_ಠ)\n…' : '')),
+        phase: ok ? 'ok' : 'bad',
+        solved: ok ? s.solved + 1 : s.solved,
+        ch: ok ? (s.ch + 1) % CH.length : s.ch,
+        cmd: ok ? '' : s.cmd,
+        flash: ok,
+      }));
+      if (ok) this.t2 = setTimeout(() => this.setState({ flash: false }), 1100);
+    }, 650);
+  };
+
+  renderVals() {
+    const s = this.state, ch = CH[s.ch], h = React.createElement;
+    const blink = this.props.blink ?? true;
+    const cursor = h('span', { style: { display: 'inline-block', width: '0.6em', height: '1.15em', verticalAlign: 'text-bottom', background: P, animation: blink ? 'bdBlink 1.05s steps(1) infinite' : 'none' } });
+    let verdict;
+    if (s.phase === 'running') verdict = h('span', { style: { color: '#908ba3' } }, '⣾ Running…');
+    else if (s.phase === 'ok') verdict = h('span', { key: 'ok' + s.attempts, style: { display: 'inline-flex', alignItems: 'center', gap: 8, background: L, color: '#0f0e14', fontWeight: 700, padding: '2px 10px', borderRadius: 6, animation: 'bdPop .45s ease-out, bdGlow .9s ease-out' } }, '✓ Correct!');
+    else verdict = h('span', { key: 'bad' + s.attempts, style: { color: R, fontWeight: 700 } }, '✗ Incorrect.');
+    const low = s.left <= 30;
+    return {
+      cursor, verdict,
+      chIndex: String(ch.index).padStart(2, '0'), chTitle: ch.title, chPre: ch.pre, chCode: ch.code, chPost: ch.post,
+      attempts: s.attempts, solved: s.solved, lastCmd: s.lastCmd, output: s.output,
+      clock: Math.floor(s.left / 60) + ':' + String(s.left % 60).padStart(2, '0'),
+      timerColor: low ? Y : '#ecebf2', timerBorder: low ? Y : BORDER,
+      solvedBorder: s.flash ? L : BORDER, cmdBorder: s.flash ? L : P,
+      cmd: s.cmd, running: s.phase === 'running', showCursor: !s.cmd,
+      onCmd: (e) => this.setState({ cmd: e.target.value }), onSubmit: this.submit,
+      hallRest: [
+        { place: 4, nick: 'sedna', solved: 21, att: 24 }, { place: 5, nick: 'pipe_dream', solved: 19, att: 27 },
+        { place: 6, nick: 'xargs', solved: 18, att: 18 }, { place: 7, nick: 'tty_tom', solved: 17, att: 33 },
+        { place: 8, nick: 'null_byte', solved: 15, att: 20 }, { place: 9, nick: 'kasia.sh', solved: 14, att: 19 },
+        { place: 10, nick: 'ctrl-z', solved: 14, att: 23 },
+      ],
+      hallRecent: [
+        { nick: 'grepmaster', solved: 24, att: 31, place: 1 }, { nick: 'bobby_tables', solved: 9, att: 22, place: 31 },
+        { nick: 'marta', solved: 12, att: 17, place: 14 }, { nick: 'vim_escape', solved: 3, att: 40, place: 55 },
+        { nick: 'kuba', solved: 11, att: 15, place: 18 }, { nick: 'ctrl-z', solved: 14, att: 23, place: 10 },
+      ],
+      modTop: [
+        { place: 1, nick: 'grepmaster', solved: 24, att: 31 }, { place: 2, nick: 'r00t', solved: 22, att: 25 },
+        { place: 3, nick: 'awk_ward', solved: 22, att: 29 }, { place: 4, nick: 'sedna', solved: 21, att: 24 },
+        { place: 5, nick: 'pipe_dream', solved: 19, att: 27 },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
