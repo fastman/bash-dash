@@ -19,6 +19,7 @@ from game.tests.fakes import result
 
 EXTERNAL_HREF = re.compile(r'<a\s[^>]*href\s*=\s*["\']?((?:https?:)?//[^"\'\s>]*)', re.I)
 ALLOWED_EXTERNAL = 'https://camlingroup.com/'
+TRACKING_WEBSITE_ID = 'test-site-id'
 
 
 class ViewTestCase(TestCase):
@@ -368,6 +369,30 @@ class NoAnswerLinksTests(ViewTestCase):
             for needle in ('class="sponsor"', 'href="https://camlingroup.com/"',
                            'rel="noopener"', 'target="_blank"', 'alt="Camlin Group"'):
                 self.assertContains(resp, needle, status_code=resp.status_code, msg_prefix=name)
+
+    @override_settings(TRACKING_WEBSITE_ID=TRACKING_WEBSITE_ID)
+    def test_player_pages_carry_configured_tracking_script_in_head_once(self):
+        for name, resp in self.player_pages().items():
+            html = resp.content.decode()
+            self.assertEqual(html.count(TRACKING_WEBSITE_ID), 1, name)
+            self.assertIn('defer src="/script.js"', html, name)
+            self.assertIn('data-exclude-search="true"', html, name)
+            self.assertLess(html.index(TRACKING_WEBSITE_ID), html.index('</head>'), name)
+
+    @override_settings(TRACKING_WEBSITE_ID='')
+    def test_player_pages_omit_tracking_script_when_unconfigured(self):
+        for name, resp in self.player_pages().items():
+            self.assertNotIn('data-website-id=', resp.content.decode(), name)
+
+    @override_settings(TRACKING_WEBSITE_ID=TRACKING_WEBSITE_ID)
+    def test_start_error_pages_do_not_carry_tracking_script(self):
+        token = services.issue_start_token()
+        responses = (
+            self.client.post(reverse('game:start'), {'nick': ' ', 't': token}),
+            self.client.post(reverse('game:start'), {'nick': 'neo', 't': 'invalid'}),
+        )
+        for resp in responses:
+            self.assertNotIn(TRACKING_WEBSITE_ID, resp.content.decode())
 
     def test_logo_is_a_collected_static_file(self):
         self.assertTrue(finders.find('game/camlin-logo.png'))

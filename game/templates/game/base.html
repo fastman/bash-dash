@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}bash-dash{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'game/game.css' %}">
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
   <main class="{% block main_class %}{% endblock %}">
