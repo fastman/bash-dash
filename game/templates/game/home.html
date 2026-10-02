@@ -4,11 +4,14 @@
 {% block content %}
 {% if show_handoff %}
 <section class="handoff" data-status-url="{{ ticket_status_url }}" data-done-url="{% url 'game:done' %}">
-  <h1>Best played on a computer</h1>
+  <span class="badge cyan">Recommended</span>
+  <h1>Use a computer for the best chance at a high score</h1>
+  <p>You'll be typing Bash commands under time pressure. Quotes, pipes, brackets and other special characters are much easier to enter on a computer.</p>
   <p>Open <strong>{{ computer_url }}</strong> and enter this game code:</p>
   <p class="game-code">{{ ticket.code }}</p>
-  <p class="muted">This code does not expire. It can start one game.</p>
+  <p class="muted">This code does not expire. Keep this page open; we'll show your result here when the game ends.</p>
 </section>
+<p class="mobile-option"><span>Or continue on this phone</span></p>
 {% endif %}
 <section class="rules">
   <h1 class="rule"><span class="badge cyan">How to play</span></h1>

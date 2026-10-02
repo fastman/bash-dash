@@ -120,7 +120,9 @@ class GateTests(ViewTestCase):
         resp = self.client.post(reverse('game:join'), {'code': f'{token[:3]} {token[3:]}'})
         self.assertRedirects(resp, reverse('game:home'))
         resp = self.client.get(reverse('game:home'))
-        self.assertContains(resp, 'Best played on a computer')
+        self.assertContains(resp, 'Use a computer for the best chance at a high score')
+        self.assertContains(resp, 'Quotes, pipes, brackets and other special characters')
+        self.assertContains(resp, 'Or continue on this phone')
         self.assertEqual(GameTicket.objects.count(), 1)
 
     def test_invalid_qr_refusal_page_has_manual_gate_code_form(self):
@@ -199,7 +201,7 @@ class ComputerHandoffTests(ViewTestCase):
         code = f' {self.ticket_obj.code[:2].lower()} {self.ticket_obj.code[2:].lower()} '
         resp = self.computer.post(reverse('game:join'), {'code': code}, follow=True)
         self.assertContains(resp, 'name="nick"')
-        self.assertNotContains(resp, 'Best played on a computer')
+        self.assertNotContains(resp, 'Use a computer for the best chance at a high score')
         self.assertEqual(self.ticket(self.computer), self.ticket_obj)
 
     def test_computer_start_updates_phone_and_phone_sees_finished_summary(self):

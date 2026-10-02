@@ -1,10 +1,11 @@
 # Project Progress
 
 ## Current Session
-- Goal: Add a one-time game code flow for moving play from a scanned phone to a computer.
+- Goal: Strengthen the mobile recommendation to continue the game on a computer.
 - Status: completed
 
 ## Recent Changes
+- 2026-10-02: Reworked the QR landing copy to explain why a computer improves the chance of a high score and clearly separated the mobile option.
 - 2026-10-02: Added permanent one-time game tickets for moving play from a scanned phone to a computer.
 - 2026-10-02: Added read-only mobile status polling and post-game summary access for computer-started games.
 - 2026-10-02: Added migration and service/view coverage; all 270 tests pass (4 Docker tests skipped).
