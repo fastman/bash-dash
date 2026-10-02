@@ -120,9 +120,9 @@ class GateTests(ViewTestCase):
         resp = self.client.post(reverse('game:join'), {'code': f'{token[:3]} {token[3:]}'})
         self.assertRedirects(resp, reverse('game:home'))
         resp = self.client.get(reverse('game:home'))
-        self.assertContains(resp, 'Use a computer for the best chance at a high score')
-        self.assertContains(resp, 'Quotes, pipes, brackets and other special characters')
-        self.assertContains(resp, 'Or continue here')
+        self.assertContains(resp, 'name="nick"')
+        self.assertNotContains(resp, 'Use a computer for the best chance at a high score')
+        self.assertNotContains(resp, 'Or continue here')
         self.assertEqual(GameTicket.objects.count(), 1)
 
     def test_invalid_qr_refusal_page_has_manual_gate_code_form(self):
@@ -149,6 +149,9 @@ class GateTests(ViewTestCase):
         self.assertEqual(resp.status_code, 200)
         ticket = self.ticket()
         self.assertContains(resp, ticket.code)
+        self.assertContains(resp, 'Use a computer for the best chance at a high score')
+        self.assertContains(resp, 'Quotes, pipes, brackets and other special characters')
+        self.assertContains(resp, 'Or continue here')
         self.assertRegex(ticket.code, r'^[ACDEFHJKMNPQRTUVWXY3479]{5}$')
 
     def test_start_without_ticket_creates_no_game(self):

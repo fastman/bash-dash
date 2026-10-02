@@ -1,10 +1,11 @@
 # Project Progress
 
 ## Current Session
-- Goal: Strengthen the mobile recommendation to continue the game on a computer.
+- Goal: Hide the computer handoff recommendation when the booth code is entered manually.
 - Status: completed
 
 ## Recent Changes
+- 2026-10-02: Manual 6-digit booth-code entry now opens the local Start form without suggesting a computer handoff.
 - 2026-10-02: Shortened the mobile fallback separator to "Or continue here".
 - 2026-10-02: Reworked the QR landing copy to explain why a computer improves the chance of a high score and clearly separated the mobile option.
 - 2026-10-02: Added permanent one-time game tickets for moving play from a scanned phone to a computer.

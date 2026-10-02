@@ -181,7 +181,7 @@ def join(request):
     token = services.normalize_token(raw)
     if services.check_start_token(token) == services.TOKEN_OK:
         ticket = services.issue_game_ticket()
-        _remember_ticket(request, ticket, 'qr')
+        _remember_ticket(request, ticket, 'code')
         return redirect('game:home')
     return _render_join(request, 'That game code is not valid or has already been used.')
 
