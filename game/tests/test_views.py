@@ -122,7 +122,7 @@ class GateTests(ViewTestCase):
         resp = self.client.get(reverse('game:home'))
         self.assertContains(resp, 'Use a computer for the best chance at a high score')
         self.assertContains(resp, 'Quotes, pipes, brackets and other special characters')
-        self.assertContains(resp, 'Or continue on this phone')
+        self.assertContains(resp, 'Or continue here')
         self.assertEqual(GameTicket.objects.count(), 1)
 
     def test_invalid_qr_refusal_page_has_manual_gate_code_form(self):

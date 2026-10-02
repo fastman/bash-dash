@@ -5,6 +5,7 @@
 - Status: completed
 
 ## Recent Changes
+- 2026-10-02: Shortened the mobile fallback separator to "Or continue here".
 - 2026-10-02: Reworked the QR landing copy to explain why a computer improves the chance of a high score and clearly separated the mobile option.
 - 2026-10-02: Added permanent one-time game tickets for moving play from a scanned phone to a computer.
 - 2026-10-02: Added read-only mobile status polling and post-game summary access for computer-started games.
