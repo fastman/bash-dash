@@ -12,6 +12,7 @@ from game import services
 from game.models import GameSession
 
 CODE = '987654'
+TRACKING_WEBSITE_ID = 'test-site-id'
 
 
 class StaffTestCase(TestCase):
@@ -125,6 +126,11 @@ class StaffNoSponsorFooterTests(StaffTestCase):
     def test_staff_pages_have_no_player_sponsor_footer(self):
         for name in ('staff_lookup', 'staff_moderate', 'staff_hall'):
             self.assertNotContains(self.client.get(reverse(f'game:{name}')), 'class="sponsor"', msg_prefix=name)
+
+    @override_settings(TRACKING_WEBSITE_ID=TRACKING_WEBSITE_ID)
+    def test_staff_pages_and_fragments_have_no_tracking_script(self):
+        for name in ('staff_lookup', 'staff_moderate', 'staff_hall', 'staff_hall_board'):
+            self.assertNotContains(self.client.get(reverse(f'game:{name}')), TRACKING_WEBSITE_ID, msg_prefix=name)
 
 
 class MmssTests(TestCase):

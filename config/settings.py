@@ -76,6 +76,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'game.context_processors.tracking',
             ],
         },
     },
@@ -175,3 +176,6 @@ START_TOKEN_TTL_S = max(0, int(os.environ.get('BASHDASH_START_TOKEN_TTL_S', 900)
 # Keep this at most half the smallest TTL staff will use, so a freshly shown QR has life left.
 START_TOKEN_ROTATE_S = max(10, int(os.environ.get('BASHDASH_START_TOKEN_ROTATE_S', 60)))
 PUBLIC_BASE_URL = os.environ.get('BASHDASH_PUBLIC_URL', '').rstrip('/')
+
+# Participant analytics (empty disables the tracking script).
+TRACKING_WEBSITE_ID = os.environ.get('BASHDASH_TRACKING_WEBSITE_ID', '')

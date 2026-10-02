@@ -1,0 +1,9 @@
+{% extends 'game/base.html' %}
+
+{% block extra_head %}
+  {% if tracking_website_id %}
+  {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'play' or request.resolver_match.url_name == 'done' %}
+  <script defer src="/script.js" data-website-id="{{ tracking_website_id }}" data-exclude-search="true"></script>
+  {% endif %}
+  {% endif %}
+{% endblock %}
